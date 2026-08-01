@@ -1,10 +1,60 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Gauge Control Source</title></head>
-<body style="font-family:Arial;background:#050609;color:#f5f6f8;padding:30px">
-<h1>Gauge Control Source</h1>
-<p>GitHub source is connected and publishing.</p>
-<p>Public contact: gaugesystems515@gmail.com</p>
-<p><a style="color:#9fd1ff" href="https://cash.app/$GaugeSystems">Pay Gauge Cash App</a></p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GS&D Gauge Master Control</title>
+  <style>
+    :root{color-scheme:dark;font-family:Arial,sans-serif;background:#050609;color:#f6f3f2}
+    body{margin:0;padding:28px;max-width:760px}
+    h1{font-size:clamp(2.2rem,8vw,4rem);margin:.2rem 0}
+    .line{color:#d91c1c;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+    .panel{margin-top:24px;padding:20px;border:1px solid #343438;background:#231a1e;border-radius:12px}
+    label{display:block;margin-top:14px;font-weight:700}
+    input,textarea{box-sizing:border-box;width:100%;margin-top:6px;padding:12px;border:1px solid #807e80;border-radius:7px;background:#050609;color:#fff;font-size:16px}
+    textarea{min-height:130px}
+    button{margin-top:18px;padding:13px 18px;border:0;border-radius:7px;background:#d91c1c;color:#fff;font-size:16px;font-weight:800}
+    pre{white-space:pre-wrap;word-break:break-word;background:#000;padding:14px;border-radius:7px}
+    a{color:#cdc9c9}
+  </style>
+</head>
+<body>
+  <div class="line">GS&D • Proof → Route → Record</div>
+  <h1>Gauge Master Control</h1>
+  <p>This is the live test gate for the GS&D proof-chain backend. It does not replace gsd-texas.com.</p>
+
+  <section class="panel">
+    <h2>Test one intake</h2>
+    <form id="intake">
+      <label>Name<input name="name" autocomplete="name"></label>
+      <label>Email or phone<input name="contact"></label>
+      <label>Vehicle / equipment<input name="asset"></label>
+      <label>Problem in exact words<textarea name="message" required></textarea></label>
+      <button type="submit">Create proof record</button>
+    </form>
+    <pre id="result">Waiting for test.</pre>
+  </section>
+
+  <p>Public contact: <a href="mailto:gaugesystems515@gmail.com">gaugesystems515@gmail.com</a></p>
+
+  <script>
+    const form = document.getElementById('intake');
+    const result = document.getElementById('result');
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      result.textContent = 'Sending...';
+      const payload = Object.fromEntries(new FormData(form).entries());
+      try {
+        const response = await fetch('/api/gauge-intake', {
+          method: 'POST',
+          headers: {'content-type':'application/json'},
+          body: JSON.stringify(payload)
+        });
+        result.textContent = JSON.stringify(await response.json(), null, 2);
+      } catch (error) {
+        result.textContent = 'Failed: ' + error.message;
+      }
+    });
+  </script>
 </body>
 </html>
