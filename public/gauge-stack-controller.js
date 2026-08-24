@@ -39,10 +39,34 @@ function safeUrl(value) {
 function ownerKey() {
   let key = sessionStorage.getItem("gaugeOwnerKey") || "";
   if (!key) {
-    key = prompt("Owner key, if configured in Netlify. Leave blank only for first test deploy.") || "";
-    sessionStorage.setItem("gaugeOwnerKey", key);
+    key = (prompt("Enter the GS&D owner key.") || "").trim();
+    if (key) sessionStorage.setItem("gaugeOwnerKey", key);
   }
   return key;
+}
+
+async function gaugeRequest(options = {}) {
+  const key = ownerKey();
+  if (!key) throw new Error("Owner key required.");
+
+  const response = await fetch("/api/gauge-stack-agent", {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      "x-gauge-owner-key": key,
+    },
+  });
+  const data = await response.json().catch(() => ({}));
+
+  if (response.status === 401) {
+    sessionStorage.removeItem("gaugeOwnerKey");
+    throw new Error("Owner key rejected. Reload and enter the current key.");
+  }
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Gauge controller request failed.");
+  }
+
+  return data;
 }
 
 function statusClass(status) {
@@ -110,12 +134,7 @@ function renderProof() {
 async function loadRegistry() {
   syncStatus.textContent = "Reading registry…";
 
-  const response = await fetch("/api/gauge-stack-agent");
-  const data = await response.json();
-
-  if (!data.ok) {
-    throw new Error(data.error || "Could not read Gauge registry.");
-  }
+  const data = await gaugeRequest();
 
   allAssets = data.assets || [];
   allActions = data.actions || [];
@@ -133,20 +152,13 @@ async function syncGaugeStack() {
   syncStatus.textContent = "Syncing Gauge Stack…";
 
   try {
-    const response = await fetch("/api/gauge-stack-agent", {
+    const data = await gaugeRequest({
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-gauge-owner-key": ownerKey(),
       },
       body: JSON.stringify({ action: "sync" }),
     });
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      throw new Error(data.error || "Gauge sync failed.");
-    }
 
     syncStatus.textContent = `${data.message} Checked ${data.checked_count} assets.`;
     renderActions(data.results || []);
