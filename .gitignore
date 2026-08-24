@@ -3,3 +3,6 @@
 
 # Installed dependencies
 node_modules/
+
+# Generated public deploy bundle
+dist/
