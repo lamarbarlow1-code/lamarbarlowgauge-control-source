@@ -24,4 +24,5 @@ export const config: Config = {
     "/public/gauge-stack-controller.js",
     "/public/gauge-stack-controller.css",
   ],
+  preferStatic: true,
 };
