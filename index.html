@@ -1,60 +1,236 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>GS&D Gauge Master Control</title>
+  <meta name="description" content="Controlled GS&D Gauge intake for diagnostics, workflows, business systems, fleets, equipment, and field operations.">
+  <title>Gauge | Controlled Systems Intake</title>
   <style>
-    :root{color-scheme:dark;font-family:Arial,sans-serif;background:#050609;color:#f6f3f2}
-    body{margin:0;padding:28px;max-width:760px}
-    h1{font-size:clamp(2.2rem,8vw,4rem);margin:.2rem 0}
-    .line{color:#d91c1c;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-    .panel{margin-top:24px;padding:20px;border:1px solid #343438;background:#231a1e;border-radius:12px}
-    label{display:block;margin-top:14px;font-weight:700}
-    input,textarea{box-sizing:border-box;width:100%;margin-top:6px;padding:12px;border:1px solid #807e80;border-radius:7px;background:#050609;color:#fff;font-size:16px}
-    textarea{min-height:130px}
-    button{margin-top:18px;padding:13px 18px;border:0;border-radius:7px;background:#d91c1c;color:#fff;font-size:16px;font-weight:800}
-    pre{white-space:pre-wrap;word-break:break-word;background:#000;padding:14px;border-radius:7px}
-    a{color:#cdc9c9}
+    :root{
+      color-scheme:dark;
+      --black:#000;
+      --ink:#050609;
+      --gunmetal:#343438;
+      --steel:#807e80;
+      --chrome:#cdc9c9;
+      --red:#d91c1c;
+      --white:#f7f7f7;
+      font-family:Inter,Arial,sans-serif;
+      background:var(--black);
+      color:var(--white)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 72% 0,rgba(217,28,28,.18),transparent 34%),var(--black)}
+    a{color:inherit}
+    .wrap{width:min(1080px,calc(100% - 32px));margin:auto}
+    header{border-bottom:1px solid rgba(205,201,201,.18);background:rgba(0,0,0,.86)}
+    nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{font-size:20px;font-weight:950;letter-spacing:.08em}
+    .brand span,.red{color:var(--red)}
+    .navlinks{display:flex;gap:10px;align-items:center}
+    .navlinks a{padding:10px 13px;text-decoration:none;font-weight:800;color:var(--chrome)}
+    .hero{padding:70px 0 38px;display:grid;grid-template-columns:1.2fr .8fr;gap:30px;align-items:end}
+    .eyebrow{margin:0 0 12px;color:var(--red);font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+    h1{margin:0;font-size:clamp(46px,8vw,88px);line-height:.94;letter-spacing:-.055em}
+    .lead{font-size:clamp(19px,2.4vw,26px);line-height:1.35;color:var(--chrome);max-width:760px}
+    .route{border:1px solid rgba(205,201,201,.2);border-left:4px solid var(--red);border-radius:14px;padding:18px;background:rgba(35,26,30,.76);font-weight:800;line-height:1.65}
+    section{padding:34px 0}
+    h2{margin:0 0 18px;font-size:clamp(28px,4vw,44px)}
+    .offers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .card,.panel{border:1px solid rgba(205,201,201,.18);border-radius:18px;background:linear-gradient(145deg,rgba(35,26,30,.88),rgba(5,6,9,.98));padding:22px}
+    .price{font-size:36px;font-weight:950;color:var(--white)}
+    .card h3{margin:6px 0 8px;font-size:20px}
+    .card p{margin:0;color:var(--chrome);line-height:1.5}
+    .button-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+    .button,button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 18px;border:0;border-radius:9px;background:var(--red);color:white;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}
+    .button.secondary{background:var(--gunmetal);border:1px solid var(--steel)}
+    button:disabled{opacity:.55;cursor:wait}
+    .status{display:inline-flex;gap:8px;align-items:center;padding:7px 10px;border-radius:999px;background:#183823;color:#c8ffd5;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+    .status::before{content:"";width:8px;height:8px;border-radius:50%;background:#4de276}
+    form{display:grid;gap:14px}
+    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    label{display:block;font-size:14px;font-weight:850;color:var(--chrome)}
+    input,select,textarea{width:100%;margin-top:7px;padding:13px;border:1px solid rgba(205,201,201,.3);border-radius:9px;background:#050609;color:white;font:inherit}
+    textarea{min-height:130px;resize:vertical}
+    input[type=file]{padding:11px}
+    .check{display:flex;gap:10px;align-items:flex-start}
+    .check input{width:auto;margin-top:3px}
+    .fine{color:var(--steel);font-size:13px;line-height:1.45}
+    pre{display:none;white-space:pre-wrap;word-break:break-word;margin:0;padding:16px;border-radius:10px;background:#050609;border:1px solid var(--gunmetal);font:14px/1.5 ui-monospace,monospace}
+    pre.show{display:block}
+    footer{padding:34px 0 54px;border-top:1px solid rgba(205,201,201,.16);color:var(--steel)}
+    @media(max-width:760px){.hero,.offers,.row{grid-template-columns:1fr}.hero{padding-top:46px}.navlinks a:first-child{display:none}}
   </style>
 </head>
 <body>
-  <div class="line">GS&D • Proof → Route → Record</div>
-  <h1>Gauge Master Control</h1>
-  <p>This is the live test gate for the GS&D proof-chain backend. It does not replace gsd-texas.com.</p>
+  <header>
+    <nav class="wrap">
+      <a class="brand" href="https://gsd-texas.com">GS<span>&amp;</span>D / GAUGE</a>
+      <div class="navlinks">
+        <a href="https://gsd-texas.com">GS&amp;D front door</a>
+        <a class="button" href="/pay">Pay intake</a>
+      </div>
+    </nav>
+  </header>
 
-  <section class="panel">
-    <h2>Test one intake</h2>
-    <form id="intake">
-      <label>Name<input name="name" autocomplete="name"></label>
-      <label>Email or phone<input name="contact"></label>
-      <label>Vehicle / equipment<input name="asset"></label>
-      <label>Problem in exact words<textarea name="message" required></textarea></label>
-      <button type="submit">Create proof record</button>
-    </form>
-    <pre id="result">Waiting for test.</pre>
-  </section>
+  <main>
+    <section class="hero wrap">
+      <div>
+        <p class="eyebrow">GS&amp;D • Proof → Route → Record</p>
+        <h1>Drop in the <span class="red">real problem.</span></h1>
+        <p class="lead">Gauge preserves the exact wording, hashes the intake, checks the source, chooses one controlled route, and returns a proof reference.</p>
+        <div class="button-row">
+          <a class="button" href="#intake">Open controlled intake</a>
+          <a class="button secondary" href="mailto:gaugesystems515@gmail.com">Email GS&amp;D</a>
+        </div>
+      </div>
+      <div>
+        <div id="health" class="status">Checking intake</div>
+        <p class="route">Raw input → source check → command validation → one route → proof record. Gauge’s protected core and private controller are not released to customers.</p>
+      </div>
+    </section>
 
-  <p>Public contact: <a href="mailto:gaugesystems515@gmail.com">gaugesystems515@gmail.com</a></p>
+    <section class="wrap">
+      <h2>Three public entry points</h2>
+      <div class="offers">
+        <article class="card"><div class="price">$25</div><h3>Reserve / open a file</h3><p>Secure the record and preserve the starting proof before work is scoped.</p></article>
+        <article class="card"><div class="price">$250</div><h3>Diagnostic intake</h3><p>One problem, one controlled review, one next route. Additional work is separate.</p></article>
+        <article class="card"><div class="price">$2,500+</div><h3>Isolated deployment</h3><p>Gauge drops into a bounded customer mission, stabilizes it, proves the result, hands off, and exits.</p></article>
+      </div>
+    </section>
+
+    <section id="intake" class="wrap">
+      <div class="panel">
+        <h2>Controlled Gauge intake</h2>
+        <p class="fine">Do not diagnose it for us. Preserve what happened in your own words. Unknown public sources are held for owner verification before any external action.</p>
+        <form id="gauge-intake" name="gauge-public-intake" method="POST" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="gauge-public-intake">
+          <input type="hidden" name="proof_reference" id="proof_reference">
+          <input type="hidden" name="raw_hash" id="raw_hash">
+          <input type="hidden" name="chosen_route" id="chosen_route">
+          <p hidden><label>Leave this blank<input type="text" name="bot-field"></label></p>
+
+          <div class="row">
+            <label>Name / business<input type="text" name="name" autocomplete="name" required></label>
+            <label>Best contact<input type="text" name="contact" placeholder="Phone or email" required></label>
+          </div>
+          <div class="row">
+            <label>What kind of system?
+              <select name="subject_type" required>
+                <option value="">Choose one</option>
+                <option>Business workflow</option>
+                <option>Paperwork / compliance</option>
+                <option>Fleet / asset operation</option>
+                <option>Vehicle / equipment</option>
+                <option>Control / electrical system</option>
+                <option>Other</option>
+              </select>
+            </label>
+            <label>Asset / process / operation<input type="text" name="asset" placeholder="Name the thing that is failing" required></label>
+          </div>
+          <label>Problem in exact words<textarea name="message" placeholder="What is happening, what should happen, and where it stops" required></textarea></label>
+          <div class="row">
+            <label>What changed before it started?<textarea name="what_changed"></textarea></label>
+            <label>What has already been tried?<textarea name="prior_attempts"></textarea></label>
+          </div>
+          <div class="row">
+            <label>Payment reference<input type="text" name="payment_reference" placeholder="If already paid"></label>
+            <label>One proof file<input type="file" name="proof_file" accept="image/*,.pdf,.txt"></label>
+          </div>
+          <label class="check"><input type="checkbox" name="accurate_info" value="yes" required><span>I confirm this record is accurate to the best of my knowledge and understand that intake does not authorize additional work.</span></label>
+          <button id="submit-button" type="submit">Create proof record</button>
+          <pre id="result" aria-live="polite"></pre>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer><div class="wrap"><strong>Gauge Systems &amp; Diagnostics</strong><br>Public capability deployed. Protected Gauge architecture remains internal.</div></footer>
 
   <script>
-    const form = document.getElementById('intake');
+    const form = document.getElementById('gauge-intake');
     const result = document.getElementById('result');
+    const submitButton = document.getElementById('submit-button');
+    const health = document.getElementById('health');
+
+    function show(message) {
+      result.textContent = message;
+      result.classList.add('show');
+    }
+
+    async function checkHealth() {
+      try {
+        const response = await fetch('/api/gauge-intake', { headers: { accept: 'application/json' } });
+        const data = await response.json();
+        health.textContent = response.ok && data.ok ? 'Gauge intake online' : 'Gauge intake held';
+      } catch {
+        health.textContent = 'Gauge intake held';
+      }
+    }
+
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      result.textContent = 'Sending...';
-      const payload = Object.fromEntries(new FormData(form).entries());
+      submitButton.disabled = true;
+      show('Preserving raw input and creating proof record...');
+
+      const formData = new FormData(form);
+      const file = formData.get('proof_file');
+      const payload = {
+        source: 'public-gauge-intake',
+        channel: 'form',
+        name: formData.get('name'),
+        contact: formData.get('contact'),
+        asset: formData.get('asset'),
+        message: formData.get('message'),
+        metadata: {
+          subject_type: formData.get('subject_type'),
+          what_changed: formData.get('what_changed'),
+          prior_attempts: formData.get('prior_attempts'),
+          payment_reference: formData.get('payment_reference'),
+          proof_attached: Boolean(file && file.size),
+          proof_filename: file && file.size ? file.name : null
+        }
+      };
+
+      let proof = null;
+      let mirrorStored = false;
       try {
-        const response = await fetch('/api/gauge-intake', {
+        const proofResponse = await fetch('/api/gauge-intake', {
           method: 'POST',
-          headers: {'content-type':'application/json'},
+          headers: { 'content-type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        result.textContent = JSON.stringify(await response.json(), null, 2);
+        proof = await proofResponse.json();
+        if (!proofResponse.ok || !proof.ok) throw new Error(proof.error || 'proof_record_failed');
+
+        document.getElementById('proof_reference').value = proof.proof_reference || '';
+        document.getElementById('raw_hash').value = proof.raw_hash || '';
+        document.getElementById('chosen_route').value = proof.route || '';
+
+        const mirrorResponse = await fetch('/', { method: 'POST', body: new FormData(form) });
+        mirrorStored = mirrorResponse.ok;
+
+        show(
+          'RECEIVED\n' +
+          'Proof: ' + proof.proof_reference + '\n' +
+          'SHA-256: ' + proof.raw_hash + '\n' +
+          'Status: held for GS&D source verification\n' +
+          'Evidence mirror: ' + (mirrorStored ? 'stored' : 'fallback required')
+        );
+        if (mirrorStored) form.reset();
       } catch (error) {
-        result.textContent = 'Failed: ' + error.message;
+        show(
+          'HELD — NO EXTERNAL ACTION\n' +
+          'The proof route did not verify a complete write.\n' +
+          'Fallback: email gaugesystems515@gmail.com and preserve this screen.\n' +
+          'Error: ' + error.message
+        );
+      } finally {
+        submitButton.disabled = false;
       }
     });
+
+    checkHealth();
   </script>
 </body>
 </html>

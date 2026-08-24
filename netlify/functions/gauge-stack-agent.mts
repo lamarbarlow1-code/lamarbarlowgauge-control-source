@@ -1,5 +1,5 @@
 import type { Config, Context } from "@netlify/functions";
-import { getDeployStore, getStore } from "@netlify/blobs";
+import { getStore } from "@netlify/blobs";
 
 type GaugeStatus =
   | "Live"
@@ -70,23 +70,18 @@ function makeId(prefix: string) {
 }
 
 function getBlobStore() {
-  const deployContext = process.env.CONTEXT || process.env.DEPLOY_PRIME_URL || "";
-  if (deployContext === "production") {
-    return getStore(STORE_NAME, { consistency: "strong" });
-  }
-  return getDeployStore(STORE_NAME);
+  return getStore({ name: STORE_NAME, consistency: "strong" });
 }
 
 function requireOwnerKey(req: Request) {
-  const configuredKey = process.env.GAUGE_OWNER_KEY;
-
-  // If no key is configured yet, allow POST so Lamar can deploy/test the first version.
-  // For production custody, set GAUGE_OWNER_KEY in Netlify environment variables.
-  if (!configuredKey) return null;
+  const configuredKey = Netlify.env.get("GAUGE_OWNER_KEY");
+  if (!configuredKey) {
+    return json({ ok: false, error: "Private controller is locked until owner access is configured." }, 503);
+  }
 
   const sentKey = req.headers.get("x-gauge-owner-key") || "";
   if (sentKey !== configuredKey) {
-    return json({ ok: false, error: "Owner key required." }, 401);
+    return json({ ok: false, error: "Private boundary." }, 401);
   }
 
   return null;
@@ -95,7 +90,11 @@ function requireOwnerKey(req: Request) {
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
   });
 }
 
@@ -315,6 +314,9 @@ async function runSync() {
 
 export default async (req: Request, context: Context) => {
   try {
+    const authError = requireOwnerKey(req);
+    if (authError) return authError;
+
     if (req.method === "GET") {
       const assets = await readAssets();
       const actions = await readJSON<NextAction[]>(ACTIONS_KEY, []);
@@ -323,9 +325,6 @@ export default async (req: Request, context: Context) => {
     }
 
     if (req.method === "POST") {
-      const authError = requireOwnerKey(req);
-      if (authError) return authError;
-
       const body = await req.json().catch(() => ({}));
 
       if (body.action === "sync") {

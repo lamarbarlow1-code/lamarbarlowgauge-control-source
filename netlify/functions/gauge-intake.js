@@ -1,9 +1,17 @@
 import crypto from "node:crypto";
+import { getStore } from "@netlify/blobs";
+
+const STORE_NAME = "gauge-public-ingress";
+const HOSTILE = /\b(ignore (all|the) (rules|instructions)|bypass safeguards|forge proof|fake proof|impersonate owner)\b/i;
 
 function json(status, body) {
   return new Response(JSON.stringify(body, null, 2), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8" },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
+      "x-content-type-options": "nosniff",
+    },
   });
 }
 
@@ -11,59 +19,81 @@ function clean(value, max = 10000) {
   return String(value ?? "").trim().slice(0, max);
 }
 
-function stableStringify(value) {
-  if (value === null || typeof value !== "object") return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(",")}}`;
+function cleanMetadata(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const output = {};
+  for (const [key, item] of Object.entries(value).slice(0, 30)) {
+    const safeKey = clean(key, 80);
+    if (!safeKey) continue;
+    if (typeof item === "boolean" || typeof item === "number" || item === null) {
+      output[safeKey] = item;
+    } else {
+      output[safeKey] = clean(item, 4000);
+    }
+  }
+  return output;
 }
 
-function sha256(value) {
-  return crypto.createHash("sha256").update(typeof value === "string" ? value : stableStringify(value)).digest("hex");
+function stableStringify(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+  return "{" + Object.keys(value).sort().map((key) => JSON.stringify(key) + ":" + stableStringify(value[key])).join(",") + "}";
+}
+
+export function sha256(value) {
+  return crypto
+    .createHash("sha256")
+    .update(typeof value === "string" ? value : stableStringify(value))
+    .digest("hex");
 }
 
 function preserveRaw(input) {
   const exact = input.message ?? input.problem ?? input.issue ?? input.need ?? input.text ?? input.body ?? "";
   return {
-    source: input.source ?? input.source_channel ?? "gsd-netlify",
-    channel: input.channel ?? "form",
-    owner: input.owner ?? null,
-    name: input.name ?? input.customer_name ?? null,
-    contact: input.email ?? input.customer_email ?? input.contact ?? input.phone ?? null,
-    exact_wording: String(exact),
-    screenshot: input.screenshot ?? input.attachment ?? input.proof ?? null,
-    metadata: input.metadata && typeof input.metadata === "object" ? input.metadata : {},
+    source: clean(input.source || "gsd-netlify", 200),
+    channel: clean(input.channel || "form", 80),
+    name: clean(input.name ?? input.customer_name, 500) || null,
+    contact: clean(input.email ?? input.customer_email ?? input.contact ?? input.phone, 1000) || null,
+    asset: clean(input.asset ?? input.subject ?? input.operation, 1000) || null,
+    exact_wording: String(exact).slice(0, 20000),
+    metadata: cleanMetadata(input.metadata),
   };
 }
 
-function classifySource(raw, input, duplicate) {
-  if (!clean(raw.exact_wording)) return "incomplete";
-  if (duplicate) return "duplicate";
-
-  const explicit = clean(input.source_class || raw.metadata?.source_class, 64).toLowerCase();
-  if (["known_owner", "unknown_source", "duplicate", "hostile", "incomplete"].includes(explicit)) return explicit;
-  if (clean(input.risk || raw.metadata?.risk, 64).toLowerCase() === "hostile") return "hostile";
-
-  const owner = clean(raw.owner, 200).toLowerCase();
-  const source = clean(raw.source, 200).toLowerCase();
-  const knownOwner = owner.includes("lamar") || source.includes("lamar") || source.includes("master-control") || source.includes("known-owner");
-  return knownOwner ? "known_owner" : "unknown_source";
+function verifiedOwner(request) {
+  const configured = Netlify.env.get("GAUGE_OWNER_KEY");
+  const supplied = request.headers.get("x-gauge-owner-key") || "";
+  if (!configured || !supplied) return false;
+  const left = Buffer.from(configured);
+  const right = Buffer.from(supplied);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-function parseCommand(raw) {
-  const exact = clean(raw.exact_wording);
+export function classifySource(raw, options = {}) {
+  if (!clean(raw.exact_wording)) return "incomplete";
+  if (options.duplicate) return "duplicate";
+  if (HOSTILE.test(raw.exact_wording)) return "hostile";
+  return options.verifiedOwner ? "known_owner" : "unknown_source";
+}
+
+export function parseCommand(raw) {
+  const exact = clean(raw.exact_wording, 20000);
   const lower = exact.toLowerCase();
   const words = lower.match(/[a-z0-9&'-]+/g) || [];
-  const destructiveWords = words.filter((w) => ["delete", "remove", "erase", "wipe", "destroy", "cancel", "close", "revoke"].includes(w));
+  const destructiveWords = words.filter((word) =>
+    ["delete", "remove", "erase", "wipe", "destroy", "cancel", "close", "revoke", "publish", "send", "file", "pay"].includes(word)
+  );
 
   let intent = "record_only";
-  if (/diagnos|symptom|fault|code/.test(lower)) intent = "diagnostic_request";
+  if (/diagnos|symptom|fault|code|inspect|analy[sz]e|verify|trace/.test(lower)) intent = "diagnostic_request";
   else if (/quote|estimate|\bbid\b|price/.test(lower)) intent = "estimate_request";
   else if (/schedule|appointment|\bbook\b/.test(lower)) intent = "schedule_request";
   else if (/\bpay\b|payment|cash app|invoice/.test(lower)) intent = "payment_route";
-  else if (/\bbuild\b|deploy|publish|update|\bfix\b|connect/.test(lower)) intent = "build_or_change";
+  else if (/\bbuild\b|deploy|publish|update|\bfix\b|connect|repair|change/.test(lower)) intent = "build_or_change";
+  else if (/\bsend\b|email|message|reply|post/.test(lower)) intent = "communication_request";
 
   const destructive = destructiveWords.length > 0;
-  const contradictory = destructive && /(keep|preserve|do not delete|don't delete|nothing gets deleted)/.test(lower);
+  const contradictory = /\b(do not|don't|never)\b.*\b(do|send|publish|delete|pay|file)\b/.test(lower);
 
   return {
     intent,
@@ -74,169 +104,207 @@ function parseCommand(raw) {
   };
 }
 
-function validateCommand(parsed) {
+export function validateCommand(parsed) {
   if (!parsed.exact_wording) return { valid: false, reason: "malformed_command" };
   if (parsed.contradictory) return { valid: false, reason: "contradictory_command" };
   if (parsed.destructive) return { valid: false, reason: "owner_confirmation_required" };
   return { valid: true, reason: null };
 }
 
-function chooseRoute(sourceClass, parsed, validation) {
+export function chooseRoute(sourceClass, parsed, validation) {
   if (["unknown_source", "duplicate", "hostile", "incomplete"].includes(sourceClass)) return "hold";
   if (!validation.valid) return validation.reason === "owner_confirmation_required" ? "owner_confirm" : "hold";
-
   if (parsed.intent === "diagnostic_request") return "diagnostic_intake";
   if (parsed.intent === "estimate_request") return "estimate_intake";
   if (parsed.intent === "schedule_request") return "schedule_hold_for_owner";
   if (parsed.intent === "payment_route") return "payment_gate";
   if (parsed.intent === "build_or_change") return "owner_build_queue";
+  if (parsed.intent === "communication_request") return "owner_outbound_queue";
   return "archive_record";
 }
 
-async function apiRequest(method, path, body, supabaseUrl, anonKey, prefer = "return=representation") {
-  const response = await fetch(`${supabaseUrl}/rest/v1/${path}`, {
-    method,
-    headers: {
-      apikey: anonKey,
-      authorization: `Bearer ${anonKey}`,
-      "content-type": "application/json",
-      prefer,
-    },
-    body: body === undefined ? undefined : JSON.stringify(body),
+function proofEntry(previousHash, ingressId, stage, payload) {
+  const payloadJson = stableStringify(payload);
+  const entryHash = sha256((previousHash || "GENESIS") + "|" + ingressId + "|" + stage + "|" + payloadJson);
+  return {
+    stage,
+    payload,
+    previous_hash: previousHash,
+    entry_hash: entryHash,
+  };
+}
+
+export function createProofRecord(input, options = {}) {
+  const raw = preserveRaw(input);
+  const rawHash = sha256(raw);
+  const ingressId = "IN-" + rawHash.slice(0, 24).toUpperCase();
+  const proofId = "GSD-" + rawHash.slice(0, 32).toUpperCase();
+  const sourceCheck = classifySource(raw, options);
+  const parsed = parseCommand(raw);
+  const validation = validateCommand(parsed);
+  const chosenRoute = chooseRoute(sourceCheck, parsed, validation);
+  const accepted = !["hold", "owner_confirm"].includes(chosenRoute);
+  const result = chosenRoute === "hold"
+    ? "paused_no_external_action"
+    : chosenRoute === "owner_confirm"
+      ? "paused_owner_confirmation_required"
+      : "accepted_for_single_route";
+  const receivedAt = options.receivedAt || new Date().toISOString();
+
+  const ingressProof = proofEntry(null, ingressId, "ingress", {
+    raw_sha256: rawHash,
+    source: raw.source,
+    source_check: sourceCheck,
+    received_at: receivedAt,
+  });
+  const decisionProof = proofEntry(ingressProof.entry_hash, ingressId, "decision", {
+    parsed_command: parsed,
+    command_validation: validation,
+    chosen_route: chosenRoute,
+    result,
   });
 
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${path}: ${response.status} ${text}`);
-  return text ? JSON.parse(text) : null;
+  return {
+    schema_version: "gauge-public-proof-v1",
+    ingress_id: ingressId,
+    proof_id: proofId,
+    received_at: receivedAt,
+    raw_input: raw,
+    raw_sha256: rawHash,
+    source_check: sourceCheck,
+    parsed_command: parsed,
+    command_validation: validation,
+    chosen_route: chosenRoute,
+    route_lock: "one_input_one_route",
+    result,
+    fallback: accepted ? "queue_route_if_down_preserve_proof" : "hold_for_owner_review",
+    proof_chain: [ingressProof, decisionProof],
+    proof_head: decisionProof.entry_hash,
+  };
 }
 
-async function findProofByHash(hash, supabaseUrl, anonKey) {
-  const title = encodeURIComponent(`Gauge Raw ${hash}`);
-  const rows = await apiRequest("GET", `proofs?proof_title=eq.${title}&select=id,proof_title&limit=1`, undefined, supabaseUrl, anonKey);
-  return Array.isArray(rows) && rows.length ? rows[0] : null;
+export function verifyProofRecord(record) {
+  let previousHash = null;
+  for (const entry of record.proof_chain || []) {
+    if (entry.previous_hash !== previousHash) return false;
+    const expected = sha256(
+      (previousHash || "GENESIS") +
+      "|" +
+      record.ingress_id +
+      "|" +
+      entry.stage +
+      "|" +
+      stableStringify(entry.payload)
+    );
+    if (entry.entry_hash !== expected) return false;
+    previousHash = entry.entry_hash;
+  }
+  return Boolean(previousHash) && record.proof_head === previousHash;
 }
 
-async function insert(table, row, supabaseUrl, anonKey) {
-  const rows = await apiRequest("POST", table, row, supabaseUrl, anonKey);
-  return Array.isArray(rows) ? rows[0] : rows;
+function publicSummary(record, extra = {}) {
+  return {
+    ok: true,
+    system: "Gauge governed intake",
+    version: "2.1-public-adapter",
+    proof_reference: record.proof_id,
+    ingress_reference: record.ingress_id,
+    raw_hash: record.raw_sha256,
+    source_check: record.source_check,
+    route: record.chosen_route,
+    result: record.result,
+    fallback: record.fallback,
+    proof_head: record.proof_head,
+    ...extra,
+  };
+}
+
+function store() {
+  return getStore({ name: STORE_NAME, consistency: "strong" });
 }
 
 export default async function handler(request) {
-  if (request.method === "GET") {
-    return json(200, {
-      ok: true,
-      system: "Gauge AI Control Kernel",
-      version: "2.0-bombproof",
-      status: "online",
-      endpoint: "/api/gauge-intake",
-      accepts: ["text", "email", "form", "screenshot"],
-    });
+  if (request.method === "GET" || request.method === "HEAD") {
+    try {
+      await store().get("_health");
+      const body = {
+        ok: true,
+        system: "Gauge governed intake",
+        version: "2.1-public-adapter",
+        status: "online",
+        storage: "reachable",
+        endpoint: "/api/gauge-intake",
+        accepts: ["text", "email", "form", "screenshot_reference"],
+      };
+      return request.method === "HEAD" ? new Response(null, { status: 200 }) : json(200, body);
+    } catch {
+      return request.method === "HEAD"
+        ? new Response(null, { status: 503 })
+        : json(503, { ok: false, error: "proof_storage_unreachable", result: "paused_no_external_action", fallback: "netlify_form_hold" });
+    }
   }
 
   if (request.method !== "POST") return json(405, { ok: false, error: "method_not_allowed" });
 
-  const supabaseUrl = Netlify.env.get("SUPABASE_URL");
-  const anonKey = Netlify.env.get("SUPABASE_ANON_KEY");
-  if (!supabaseUrl || !anonKey) return json(503, { ok: false, error: "database_not_configured", fallback: "hold" });
+  const contentLength = Number(request.headers.get("content-length") || 0);
+  if (contentLength > 500000) return json(413, { ok: false, error: "payload_too_large", fallback: "netlify_form_hold" });
 
   const input = await request.json().catch(() => null);
-  if (!input || typeof input !== "object") return json(400, { ok: false, error: "invalid_json", fallback: "hold" });
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return json(400, { ok: false, error: "invalid_json", fallback: "netlify_form_hold" });
+  }
 
-  const raw = preserveRaw(input);
-  if (!clean(raw.exact_wording)) return json(400, { ok: false, source_check: "incomplete", route: "hold", result: "paused_no_external_action" });
+  const proofRecord = createProofRecord(input, { verifiedOwner: verifiedOwner(request) });
+  if (!clean(proofRecord.raw_input.exact_wording)) {
+    return json(400, {
+      ok: false,
+      source_check: "incomplete",
+      route: "hold",
+      result: "paused_no_external_action",
+      fallback: "netlify_form_hold",
+    });
+  }
 
-  const hashPayload = { ...raw, received_at: undefined };
-  const hash = sha256(hashPayload);
-  const now = new Date().toISOString();
+  const dryRun = input.dry_run === true || new URL(request.url).searchParams.get("dry_run") === "1";
+  if (dryRun) return json(200, publicSummary(proofRecord, { dry_run: true, persisted: false }));
 
+  const key = "records/" + proofRecord.raw_sha256 + ".json";
   try {
-    const existingProof = await findProofByHash(hash, supabaseUrl, anonKey);
-    const sourceCheck = classifySource(raw, input, Boolean(existingProof));
-    const parsed = parseCommand(raw);
-    const validation = validateCommand(parsed);
-    const chosenRoute = chooseRoute(sourceCheck, parsed, validation);
-    const accepted = !["hold", "owner_confirm"].includes(chosenRoute);
-    const result = chosenRoute === "hold" ? "paused_no_external_action" : chosenRoute === "owner_confirm" ? "paused_owner_confirmation_required" : "accepted_for_single_route";
+    const existing = await store().get(key, { type: "json" });
+    if (existing) {
+      const duplicateRecord = {
+        ...existing,
+        source_check: "duplicate",
+        chosen_route: "hold",
+        result: "paused_no_external_action",
+        fallback: "existing_proof_record",
+      };
+      return json(200, publicSummary(duplicateRecord, { duplicate: true, persisted: true }));
+    }
 
-    if (sourceCheck === "duplicate") {
-      return json(200, {
-        ok: true,
-        system: "Gauge AI Control Kernel",
-        version: "2.0-bombproof",
-        proof_chain: { raw_input: raw, raw_hash: hash, source_check: sourceCheck, parsed_command: parsed, command_validation: validation, chosen_route: "hold", route_lock: "one_input_one_route", result, fallback: "existing_proof_record" },
-        existing_proof_id: existingProof.id,
+    await store().setJSON(key, proofRecord);
+    const verified = await store().get(key, { type: "json" });
+    if (!verified || verified.proof_head !== proofRecord.proof_head) {
+      return json(503, {
+        ok: false,
+        error: "proof_write_not_verified",
+        result: "paused_no_external_action",
+        fallback: "netlify_form_hold",
       });
     }
 
-    const intake = await insert("intakes", {
-      source_channel: clean(raw.channel || raw.source, 200),
-      sender_name: clean(raw.name, 500) || null,
-      contact_method: clean(raw.contact, 1000) || null,
-      signal_timestamp: now,
-      raw_message: raw.exact_wording,
-      requested_help: parsed.intent,
-      urgency: clean(input.urgency, 100) || "normal",
-      money_or_service_signal: parsed.intent === "payment_route" || Boolean(input.payment || input.paid || input.service),
-      proof_attached: Boolean(raw.screenshot),
-      notes: `sha256:${hash}\nraw:${stableStringify(raw)}\nvalidation:${stableStringify(validation)}`,
-      classification: sourceCheck,
-    }, supabaseUrl, anonKey);
-
-    const proof = await insert("proofs", {
-      proof_title: `Gauge Raw ${hash}`,
-      proof_type: "raw_input_sha256",
-      related_intake_id: intake.id,
-      source: clean(raw.source, 200),
-      proof_timestamp: now,
-      description: `Raw input preserved. SHA-256: ${hash}`,
-      custody_note: `source=${sourceCheck}; intent=${parsed.intent}; route=${chosenRoute}; result=${result}`,
-      verification_status: accepted ? "unchecked" : "held",
-    }, supabaseUrl, anonKey);
-
-    const route = await insert("routes", {
-      subject_kind: "intake",
-      subject_id: intake.id,
-      route_option: chosenRoute,
-      next_action: accepted ? `Execute only route: ${chosenRoute}.` : chosenRoute === "owner_confirm" ? "Owner confirmation required before destructive action." : "Hold. Owner review required before any external action.",
-    }, supabaseUrl, anonKey);
-
-    let queue = null;
-    if (!accepted || chosenRoute === "schedule_hold_for_owner" || chosenRoute === "owner_build_queue") {
-      queue = await insert("owner_review_queue", {
-        subject_kind: "intake",
-        subject_id: intake.id,
-        title: clean(raw.name, 300) ? `${clean(raw.name, 300)}: ${clean(raw.exact_wording, 80)}` : clean(raw.exact_wording, 100),
-        route_recommendation: chosenRoute,
-        risk: sourceCheck === "known_owner" ? validation.reason || "owner route" : sourceCheck,
-        proof_needed: sourceCheck === "known_owner" ? "Proof before execution if action changes external state." : "Verify source and proof before execution.",
-        status: "pending",
-        notes: `proof_id:${proof.id}\nroute_id:${route.id}\nsha256:${hash}`,
-      }, supabaseUrl, anonKey);
-    }
-
-    return json(201, {
-      ok: true,
-      system: "Gauge AI Control Kernel",
-      version: "2.0-bombproof",
-      proof_chain: {
-        raw_input: raw,
-        raw_hash: hash,
-        source_check: sourceCheck,
-        parsed_command: parsed,
-        command_validation: validation,
-        chosen_route: chosenRoute,
-        route_lock: "one_input_one_route",
-        result,
-        fallback: accepted ? "queue_route_if_down_preserve_proof" : "hold_for_owner_review",
-      },
-      ids: { intake_id: intake.id, proof_id: proof.id, route_id: route.id, queue_id: queue?.id || null },
-    });
+    return json(201, publicSummary(proofRecord, { duplicate: false, persisted: true }));
   } catch (error) {
-    console.error(error);
-    return json(500, { ok: false, error: "proof_chain_write_failed", result: "paused_no_external_action", fallback: "hold_for_owner_review" });
+    console.error("Gauge proof storage failed", error);
+    return json(503, {
+      ok: false,
+      error: "proof_storage_failed",
+      result: "paused_no_external_action",
+      fallback: "netlify_form_hold",
+    });
   }
 }
 
 export const config = {
-  path: ["/api/gauge-intake", "/.netlify/functions/gauge-intake"],
+  path: "/api/gauge-intake",
 };

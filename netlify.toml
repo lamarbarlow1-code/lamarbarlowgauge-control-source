@@ -4,3 +4,42 @@
 
 [functions]
   node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/filter"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/hub"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/intake"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/pay"
+  to = "https://cash.app/$GaugeSystems"
+  status = 302
+
+[[redirects]]
+  from = "/cashapp"
+  to = "https://cash.app/$GaugeSystems"
+  status = 302
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store"
+    X-Robots-Tag = "noindex, noarchive"

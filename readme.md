@@ -1,37 +1,28 @@
-# Gauge Stack Controller — No Supabase Version
+# GS&D Gauge Public Adapter
 
-Use this version if you do not have Supabase keys.
+This is the public-facing deployment adapter for Gauge Systems & Diagnostics.
+It is not Gauge's protected core or private controller.
 
-This stays inside the existing GS&D Gauge Master Control app.
+## Public route
 
-No new scattered app.
-No Supabase.
-No outside database keys.
+Public input is preserved, SHA-256 hashed, source-checked, assigned one route,
+and returned with a proof reference. Unknown public sources remain on hold
+until GS&D verifies them.
 
-Storage:
-- Netlify Blobs
-- Store name: gauge-stack-control
-- Registry key: registry.json
-- Proof key: proof-log.json
-- Next actions key: next-actions.json
+Routes:
 
-Required package:
-- @netlify/blobs
+- `/`, `/filter`, `/hub`, and `/intake` — controlled public intake
+- `/api/gauge-intake` — governed proof-record adapter
+- `/pay` and `/cashapp` — Gauge Systems payment route
+- `/controller` and controller assets — private boundary
 
-Files to add:
-- public/gauge-stack-controller.html
-- public/gauge-stack-controller.css
-- public/gauge-stack-controller.js
-- netlify/functions/gauge-stack-agent.mts
+## Verification
 
-Add this link inside the existing Master Control page:
-<a href="/gauge-stack-controller.html">Open Gauge Stack Controller</a>
+```bash
+npm install
+npm test
+npx netlify build --offline
+```
 
-Then redeploy the same Netlify project:
-gsd-gauge-master-control
-
-
-Fixed deployment note:
-- Runtime bug corrected: the function no longer references an undeclared Netlify global.
-- Production custody option added: set GAUGE_OWNER_KEY in Netlify environment variables to protect POST sync/save actions.
-- Frontend output escaping added before rendering registry values.
+Deploy to the existing Netlify project `gsd-gauge-master-control`. Do not
+create a replacement project or publish private Gauge source.
