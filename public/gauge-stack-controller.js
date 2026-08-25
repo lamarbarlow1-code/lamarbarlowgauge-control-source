@@ -4,10 +4,21 @@ const reloadButton = document.getElementById("reloadButton");
 const syncStatus = document.getElementById("syncStatus");
 const nextActions = document.getElementById("nextActions");
 const proofLog = document.getElementById("proofLog");
+const correctionForm = document.getElementById("correctionForm");
+const correctionAsset = document.getElementById("correctionAsset");
+const correctionType = document.getElementById("correctionType");
+const previousState = document.getElementById("previousState");
+const correctedState = document.getElementById("correctedState");
+const correctionText = document.getElementById("correctionText");
+const correctionProof = document.getElementById("correctionProof");
+const recordCorrectionButton = document.getElementById("recordCorrectionButton");
+const correctionStatus = document.getElementById("correctionStatus");
+const correctionsLog = document.getElementById("correctionsLog");
 
 let allAssets = [];
 let allActions = [];
 let allProof = [];
+let allCorrections = [];
 let currentFilter = "All";
 
 function safeText(value) {
@@ -73,6 +84,11 @@ function statusClass(status) {
   return safeText(status).replaceAll(" ", "");
 }
 
+function formatDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? safeText(value) : date.toLocaleString();
+}
+
 function renderAssets() {
   const assets = currentFilter === "All"
     ? allAssets
@@ -131,6 +147,39 @@ function renderProof() {
   `).join("");
 }
 
+function renderCorrectionTargets() {
+  const selected = correctionAsset.value;
+  correctionAsset.innerHTML = [
+    '<option value="">Select a governed asset</option>',
+    ...allAssets.map((asset) => (
+      `<option value="${escapeHtml(asset.id)}">${escapeHtml(asset.asset_type)} / ${escapeHtml(asset.asset_name)}</option>`
+    )),
+  ].join("");
+
+  if (allAssets.some((asset) => asset.id === selected)) {
+    correctionAsset.value = selected;
+  }
+}
+
+function renderCorrections() {
+  if (!allCorrections.length) {
+    correctionsLog.innerHTML = "<li>No corrections recorded yet.</li>";
+    return;
+  }
+
+  correctionsLog.innerHTML = allCorrections.slice(0, 100).map((item) => `
+    <li>
+      <strong>${formatDate(item.created_at)}</strong> —
+      ${escapeHtml(item.correction_type)} / ${escapeHtml(item.target_asset_name)}<br />
+      ${escapeHtml(item.previous_state || "No prior state recorded")} →
+      ${escapeHtml(item.corrected_state)}<br />
+      ${escapeHtml(item.correction_text)}
+      ${item.proof_ref ? `<br />Proof: ${escapeHtml(item.proof_ref)}` : ""}
+      <br /><span class="correction-hash">SHA-256 ${escapeHtml(item.content_hash)}</span>
+    </li>
+  `).join("");
+}
+
 async function loadRegistry() {
   syncStatus.textContent = "Reading registry…";
 
@@ -139,12 +188,15 @@ async function loadRegistry() {
   allAssets = data.assets || [];
   allActions = data.actions || [];
   allProof = data.proof_log || [];
+  allCorrections = data.corrections || [];
 
   renderAssets();
   renderActions();
   renderProof();
+  renderCorrectionTargets();
+  renderCorrections();
 
-  syncStatus.textContent = `Loaded ${allAssets.length} assets.`;
+  syncStatus.textContent = `Loaded ${allAssets.length} assets and ${allCorrections.length} corrections.`;
 }
 
 async function syncGaugeStack() {
@@ -170,6 +222,45 @@ async function syncGaugeStack() {
   }
 }
 
+async function recordCorrection(event) {
+  event.preventDefault();
+  recordCorrectionButton.disabled = true;
+  correctionStatus.textContent = "Recording correction and preserving proof…";
+
+  try {
+    const data = await gaugeRequest({
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        action: "addCorrection",
+        correction: {
+          target_asset_id: correctionAsset.value,
+          correction_type: correctionType.value,
+          previous_state: previousState.value,
+          corrected_state: correctedState.value,
+          correction_text: correctionText.value,
+          proof_ref: correctionProof.value,
+        },
+      }),
+    });
+
+    correctionStatus.textContent = data.deduped
+      ? "Exact correction already exists; no duplicate was added."
+      : "Correction recorded and proof preserved.";
+    previousState.value = "";
+    correctedState.value = "";
+    correctionText.value = "";
+    correctionProof.value = "";
+    await loadRegistry();
+  } catch (error) {
+    correctionStatus.textContent = error.message || "Correction could not be recorded.";
+  } finally {
+    recordCorrectionButton.disabled = false;
+  }
+}
+
 document.querySelectorAll("[data-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     currentFilter = button.dataset.filter;
@@ -178,6 +269,7 @@ document.querySelectorAll("[data-filter]").forEach((button) => {
 });
 
 syncButton.addEventListener("click", syncGaugeStack);
+correctionForm.addEventListener("submit", recordCorrection);
 reloadButton.addEventListener("click", () => loadRegistry().catch((error) => {
   syncStatus.textContent = error.message;
 }));
