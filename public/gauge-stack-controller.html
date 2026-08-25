@@ -63,6 +63,54 @@
 
     <section class="panel">
       <div class="panel-head">
+        <h2>Corrections Log</h2>
+        <p>Owner-only fixes, breaks, and exact corrections.</p>
+      </div>
+
+      <form id="correctionForm" class="correction-form">
+        <label>
+          Target asset
+          <select id="correctionAsset" required>
+            <option value="">Select a governed asset</option>
+          </select>
+        </label>
+        <label>
+          Record type
+          <select id="correctionType" required>
+            <option value="Owner Correction">Owner Correction</option>
+            <option value="Fix">Fix</option>
+            <option value="Break">Break</option>
+          </select>
+        </label>
+        <label>
+          Previous state
+          <input id="previousState" maxlength="500" placeholder="What was wrong or incomplete" />
+        </label>
+        <label>
+          Corrected state
+          <input id="correctedState" maxlength="500" required placeholder="What is true now" />
+        </label>
+        <label class="wide-field">
+          Exact correction
+          <textarea id="correctionText" maxlength="2000" required placeholder="Record the exact owner correction."></textarea>
+        </label>
+        <label class="wide-field">
+          Proof reference
+          <input id="correctionProof" maxlength="500" placeholder="Proof ID, file hash, deploy ID, or governed URL" />
+        </label>
+        <div class="wide-field button-row">
+          <button id="recordCorrectionButton" type="submit">Record Correction</button>
+          <p id="correctionStatus" class="status-line" aria-live="polite">Ready.</p>
+        </div>
+      </form>
+
+      <ol id="correctionsLog" class="actions">
+        <li>No corrections recorded yet.</li>
+      </ol>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
         <h2>Next Action List</h2>
         <p>Fix the next true thing.</p>
       </div>
