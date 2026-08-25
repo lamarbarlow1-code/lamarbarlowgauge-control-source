@@ -22,8 +22,14 @@ test("build ships the owner controller shell without exposing the protected API"
     new URL("../public/gauge-stack-controller.js", import.meta.url),
     "utf8",
   );
+  const agent = await readFile(
+    new URL("../netlify/functions/gauge-stack-agent.mts", import.meta.url),
+    "utf8",
+  );
 
   assert.match(boundary, /preferStatic:\s*true/);
   assert.match(controller, /x-gauge-owner-key/);
   assert.match(controller, /sessionStorage\.removeItem\("gaugeOwnerKey"\)/);
+  assert.match(agent, /OWNER_KEY_SHA256 = "[a-f0-9]{64}"/);
+  assert.match(agent, /timingSafeEqual/);
 });
