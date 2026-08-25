@@ -61,11 +61,31 @@ type NextAction = {
   created_at: string;
 };
 
+type CorrectionType = "Fix" | "Break" | "Owner Correction";
+
+type Correction = {
+  id: string;
+  content_hash: string;
+  target_asset_id: string;
+  target_asset_name: string;
+  correction_type: CorrectionType;
+  previous_state: string | null;
+  corrected_state: string;
+  correction_text: string;
+  proof_ref: string | null;
+  created_by: "GS&D owner";
+  created_at: string;
+};
+
+class CorrectionValidationError extends Error {}
+
 const STORE_NAME = "gauge-stack-control";
 const REGISTRY_KEY = "registry.json";
 const PROOF_KEY = "proof-log.json";
 const ACTIONS_KEY = "next-actions.json";
+const CORRECTIONS_KEY = "corrections.json";
 const OWNER_KEY_SHA256 = "104bc76b1eb77a8f2ecc5869417feab800e038830435dbd1e416aea76a23b633";
+const CORRECTION_TYPES = new Set<CorrectionType>(["Fix", "Break", "Owner Correction"]);
 
 function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -107,6 +127,69 @@ function json(data: unknown, status = 200) {
       "x-content-type-options": "nosniff",
     },
   });
+}
+
+function requiredCorrectionText(value: unknown, label: string, maxLength: number) {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new CorrectionValidationError(`${label} is required.`);
+  }
+
+  const normalized = value.trim();
+  if (normalized.length > maxLength) {
+    throw new CorrectionValidationError(`${label} must be ${maxLength} characters or fewer.`);
+  }
+
+  return normalized;
+}
+
+function optionalCorrectionText(value: unknown, label: string, maxLength: number) {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") {
+    throw new CorrectionValidationError(`${label} must be text.`);
+  }
+
+  const normalized = value.trim();
+  if (!normalized) return null;
+  if (normalized.length > maxLength) {
+    throw new CorrectionValidationError(`${label} must be ${maxLength} characters or fewer.`);
+  }
+
+  return normalized;
+}
+
+function normalizeCorrection(input: unknown, assets: GaugeAsset[]) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new CorrectionValidationError("Correction details are required.");
+  }
+
+  const raw = input as Record<string, unknown>;
+  const target_asset_id = requiredCorrectionText(raw.target_asset_id, "Target asset", 120);
+  const target = assets.find((asset) => asset.id === target_asset_id);
+  if (!target) {
+    throw new CorrectionValidationError("Target asset is not in the governed registry.");
+  }
+
+  const correction_type = requiredCorrectionText(raw.correction_type, "Correction type", 40);
+  if (!CORRECTION_TYPES.has(correction_type as CorrectionType)) {
+    throw new CorrectionValidationError("Correction type must be Fix, Break, or Owner Correction.");
+  }
+
+  const normalized = {
+    target_asset_id,
+    target_asset_name: target.asset_name,
+    correction_type: correction_type as CorrectionType,
+    previous_state: optionalCorrectionText(raw.previous_state, "Previous state", 500),
+    corrected_state: requiredCorrectionText(raw.corrected_state, "Corrected state", 500),
+    correction_text: requiredCorrectionText(raw.correction_text, "Exact correction", 2000),
+    proof_ref: optionalCorrectionText(raw.proof_ref, "Proof reference", 500),
+  };
+
+  const content_hash = crypto
+    .createHash("sha256")
+    .update(JSON.stringify(normalized))
+    .digest("hex");
+
+  return { ...normalized, content_hash };
 }
 
 const starterAssets: GaugeAsset[] = [
@@ -323,6 +406,72 @@ async function runSync() {
   };
 }
 
+async function addCorrection(input: unknown) {
+  const assets = await readAssets();
+  const normalized = normalizeCorrection(input, assets);
+  const corrections = await readJSON<Correction[]>(CORRECTIONS_KEY, []);
+  const duplicate = corrections.find((item) => item.content_hash === normalized.content_hash);
+
+  if (duplicate) {
+    return {
+      ok: true,
+      message: "Exact correction already recorded.",
+      deduped: true,
+      correction: duplicate,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const correction: Correction = {
+    id: `correction-${normalized.content_hash.slice(0, 24)}`,
+    ...normalized,
+    created_by: "GS&D owner",
+    created_at: now,
+  };
+
+  const oldProof = await readJSON<ProofLog[]>(PROOF_KEY, []);
+  const proof: ProofLog = {
+    id: `proof-${normalized.content_hash.slice(0, 24)}`,
+    asset_id: "asset-corrections",
+    asset_name: "Corrections log",
+    asset_type: "Corrections",
+    status: "Live",
+    proof_event: "Owner correction recorded in the governed Corrections Log.",
+    proof_data: {
+      correction_id: correction.id,
+      content_hash: correction.content_hash,
+      target_asset_id: correction.target_asset_id,
+      correction_type: correction.correction_type,
+      proof_ref: correction.proof_ref,
+    },
+    created_at: now,
+  };
+
+  const updatedAssets = assets.map((asset) => asset.id === "asset-corrections"
+    ? {
+        ...asset,
+        asset_url: "/api/gauge-stack-agent",
+        source: "Netlify Blobs + Master Control",
+        status: "Live" as GaugeStatus,
+        proof_needed: false,
+        notes: "Owner-only, hash-deduplicated corrections retained in corrections.json.",
+        last_checked_at: now,
+        updated_at: now,
+      }
+    : asset);
+
+  await writeJSON(CORRECTIONS_KEY, [correction, ...corrections].slice(0, 500));
+  await writeJSON(PROOF_KEY, [proof, ...oldProof].slice(0, 500));
+  await writeJSON(REGISTRY_KEY, updatedAssets);
+
+  return {
+    ok: true,
+    message: "Correction recorded and proof preserved.",
+    deduped: false,
+    correction,
+  };
+}
+
 export default async (req: Request, context: Context) => {
   try {
     const authError = requireOwnerKey(req);
@@ -332,7 +481,14 @@ export default async (req: Request, context: Context) => {
       const assets = await readAssets();
       const actions = await readJSON<NextAction[]>(ACTIONS_KEY, []);
       const proof_log = await readJSON<ProofLog[]>(PROOF_KEY, []);
-      return json({ ok: true, assets, actions, proof_log: proof_log.slice(0, 25) });
+      const corrections = await readJSON<Correction[]>(CORRECTIONS_KEY, []);
+      return json({
+        ok: true,
+        assets,
+        actions,
+        proof_log: proof_log.slice(0, 25),
+        corrections: corrections.slice(0, 100),
+      });
     }
 
     if (req.method === "POST") {
@@ -347,7 +503,11 @@ export default async (req: Request, context: Context) => {
         return json({ ok: true, message: "Registry saved." });
       }
 
-      return json({ ok: false, error: "Use action: sync or saveRegistry." }, 400);
+      if (body.action === "addCorrection") {
+        return json(await addCorrection(body.correction));
+      }
+
+      return json({ ok: false, error: "Use action: sync, saveRegistry, or addCorrection." }, 400);
     }
 
     return json({ ok: false, error: "Use GET or POST." }, 405);
@@ -357,7 +517,7 @@ export default async (req: Request, context: Context) => {
         ok: false,
         error: error instanceof Error ? error.message : "Unknown Gauge Agent error.",
       },
-      500
+      error instanceof CorrectionValidationError ? 400 : 500
     );
   }
 };
