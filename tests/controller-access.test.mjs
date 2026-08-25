@@ -33,3 +33,30 @@ test("build ships the owner controller shell without exposing the protected API"
   assert.match(agent, /OWNER_KEY_SHA256 = "[a-f0-9]{64}"/);
   assert.match(agent, /timingSafeEqual/);
 });
+
+test("corrections are owner-only, governed, hash-deduplicated, and proof-backed", async () => {
+  const html = await readFile(
+    new URL("../public/gauge-stack-controller.html", import.meta.url),
+    "utf8",
+  );
+  const controller = await readFile(
+    new URL("../public/gauge-stack-controller.js", import.meta.url),
+    "utf8",
+  );
+  const agent = await readFile(
+    new URL("../netlify/functions/gauge-stack-agent.mts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(html, /id="correctionForm"/);
+  assert.match(html, /id="correctionsLog"/);
+  assert.match(controller, /action:\s*"addCorrection"/);
+  assert.match(controller, /SHA-256/);
+  assert.match(agent, /const CORRECTIONS_KEY = "corrections\.json"/);
+  assert.match(agent, /Target asset is not in the governed registry/);
+  assert.match(agent, /content_hash === normalized\.content_hash/);
+  assert.match(agent, /deduped:\s*true/);
+  assert.match(agent, /writeJSON\(CORRECTIONS_KEY/);
+  assert.match(agent, /proof_event: "Owner correction recorded in the governed Corrections Log\."/);
+  assert.match(agent, /const authError = requireOwnerKey\(req\)/);
+});
