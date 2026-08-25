@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type { Config, Context } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
 
@@ -64,6 +65,7 @@ const STORE_NAME = "gauge-stack-control";
 const REGISTRY_KEY = "registry.json";
 const PROOF_KEY = "proof-log.json";
 const ACTIONS_KEY = "next-actions.json";
+const OWNER_KEY_SHA256 = "104bc76b1eb77a8f2ecc5869417feab800e038830435dbd1e416aea76a23b633";
 
 function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -73,14 +75,23 @@ function getBlobStore() {
   return getStore({ name: STORE_NAME, consistency: "strong" });
 }
 
+function hashOwnerKey(value: string) {
+  return crypto.createHash("sha256").update(value).digest();
+}
+
 function requireOwnerKey(req: Request) {
   const configuredKey = Netlify.env.get("GAUGE_OWNER_KEY");
-  if (!configuredKey) {
+  const configuredHash = Netlify.env.get("GAUGE_OWNER_KEY_SHA256") || OWNER_KEY_SHA256;
+  if (!configuredKey && !configuredHash) {
     return json({ ok: false, error: "Private controller is locked until owner access is configured." }, 503);
   }
 
   const sentKey = req.headers.get("x-gauge-owner-key") || "";
-  if (sentKey !== configuredKey) {
+  const expected = configuredKey
+    ? hashOwnerKey(configuredKey)
+    : Buffer.from(configuredHash, "hex");
+  const supplied = hashOwnerKey(sentKey);
+  if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) {
     return json({ ok: false, error: "Private boundary." }, 401);
   }
 
