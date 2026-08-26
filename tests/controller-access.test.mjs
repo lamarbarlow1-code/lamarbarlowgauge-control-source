@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const controllerAssets = [
@@ -38,6 +38,12 @@ test("build ships the owner controller shell without exposing the protected API"
   assert.match(controller, /sessionStorage\.removeItem\("gaugeOwnerKey"\)/);
   assert.match(agent, /OWNER_KEY_SHA256 = "[a-f0-9]{64}"/);
   assert.match(agent, /timingSafeEqual/);
+
+  const functionFiles = await readdir(new URL("../netlify/functions/", import.meta.url));
+  assert.deepEqual(
+    functionFiles.sort(),
+    ["gauge-intake.js", "gauge-stack-agent.mts", "private-boundary.mts"],
+  );
 });
 
 test("corrections are owner-only, governed, hash-deduplicated, and proof-backed", async () => {
@@ -71,7 +77,7 @@ test("public ingress is connected to owner routing on the same proof record", as
   const html = await readFile(new URL("../public/gauge-stack-controller.html", import.meta.url), "utf8");
   const controller = await readFile(new URL("../public/gauge-stack-controller.js", import.meta.url), "utf8");
   const agent = await readFile(new URL("../netlify/functions/gauge-stack-agent.mts", import.meta.url), "utf8");
-  const ownerControl = await readFile(new URL("../netlify/functions/gauge-owner-control.js", import.meta.url), "utf8");
+  const ownerControl = await readFile(new URL("../netlify/lib/gauge-owner-control.js", import.meta.url), "utf8");
 
   assert.match(html, /id="intakeQueue"/);
   assert.match(html, /id="intakeDecisionForm"/);

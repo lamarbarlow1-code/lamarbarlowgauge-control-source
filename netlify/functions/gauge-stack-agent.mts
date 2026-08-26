@@ -5,7 +5,7 @@ import {
   applyOwnerControl,
   IntakeValidationError,
   verifyIntakeProofRecord,
-} from "./gauge-owner-control.js";
+} from "../lib/gauge-owner-control.js";
 
 type GaugeStatus =
   | "Live"

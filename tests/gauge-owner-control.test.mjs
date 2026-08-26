@@ -6,7 +6,7 @@ import {
   applyOwnerControl,
   IntakeValidationError,
   verifyIntakeProofRecord,
-} from "../netlify/functions/gauge-owner-control.js";
+} from "../netlify/lib/gauge-owner-control.js";
 
 const receivedAt = "2026-08-26T01:00:00.000Z";
 const updatedAt = "2026-08-26T02:00:00.000Z";
