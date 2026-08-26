@@ -34,6 +34,8 @@
     h1{margin:0;font-size:clamp(46px,8vw,88px);line-height:.94;letter-spacing:-.055em}
     .lead{font-size:clamp(19px,2.4vw,26px);line-height:1.35;color:var(--chrome);max-width:760px}
     .route{border:1px solid rgba(205,201,201,.2);border-left:4px solid var(--red);border-radius:14px;padding:18px;background:rgba(35,26,30,.76);font-weight:800;line-height:1.65}
+    .logo-lock{display:grid;place-items:center;margin-bottom:14px;padding:18px;border:1px solid rgba(205,201,201,.2);border-radius:16px;background:#000}
+    .master-logo{display:block;width:min(100%,330px);height:auto;filter:drop-shadow(0 0 28px rgba(217,28,28,.4))}
     section{padding:34px 0}
     h2{margin:0 0 18px;font-size:clamp(28px,4vw,44px)}
     .offers{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
@@ -41,6 +43,7 @@
     .price{font-size:36px;font-weight:950;color:var(--white)}
     .card h3{margin:6px 0 8px;font-size:20px}
     .card p{margin:0;color:var(--chrome);line-height:1.5}
+    .card .button{width:100%;margin-top:16px}
     .button-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
     .button,button{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 18px;border:0;border-radius:9px;background:var(--red);color:white;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}
     .button.secondary{background:var(--gunmetal);border:1px solid var(--steel)}
@@ -58,6 +61,7 @@
     .fine{color:var(--steel);font-size:13px;line-height:1.45}
     pre{display:none;white-space:pre-wrap;word-break:break-word;margin:0;padding:16px;border-radius:10px;background:#050609;border:1px solid var(--gunmetal);font:14px/1.5 ui-monospace,monospace}
     pre.show{display:block}
+    .proof-actions{display:none;flex-wrap:wrap;gap:10px;margin-top:12px}.proof-actions.show{display:flex}
     footer{padding:34px 0 54px;border-top:1px solid rgba(205,201,201,.16);color:var(--steel)}
     @media(max-width:760px){.hero,.offers,.row{grid-template-columns:1fr}.hero{padding-top:46px}.navlinks a:first-child{display:none}}
   </style>
@@ -85,6 +89,7 @@
         </div>
       </div>
       <div>
+        <div class="logo-lock"><img class="master-logo" src="data:image/jpeg;base64,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" alt="Gauge Systems &amp; Diagnostics chrome gear and red needle logo"></div>
         <div id="health" class="status">Checking intake</div>
         <p class="route">Raw input → source check → command validation → one route → proof record. Gauge’s protected core and private controller are not released to customers.</p>
       </div>
@@ -93,9 +98,9 @@
     <section class="wrap">
       <h2>Three public entry points</h2>
       <div class="offers">
-        <article class="card"><div class="price">$25</div><h3>Reserve / open a file</h3><p>Secure the record and preserve the starting proof before work is scoped.</p></article>
-        <article class="card"><div class="price">$250</div><h3>Diagnostic intake</h3><p>One problem, one controlled review, one next route. Additional work is separate.</p></article>
-        <article class="card"><div class="price">$2,500+</div><h3>Isolated deployment</h3><p>Gauge drops into a bounded customer mission, stabilizes it, proves the result, hands off, and exits.</p></article>
+        <article class="card"><div class="price">$25</div><h3>Reserve / open a file</h3><p>Secure the record and preserve the starting proof before work is scoped.</p><a class="button secondary" href="#intake" data-service-lane="file_reserve_25">Choose file lane</a></article>
+        <article class="card"><div class="price">$250</div><h3>Diagnostic intake</h3><p>One problem, one controlled review, one next route. Additional work is separate.</p><a class="button secondary" href="#intake" data-service-lane="diagnostic_250">Choose diagnostic</a></article>
+        <article class="card"><div class="price">$2,500+</div><h3>Isolated deployment</h3><p>Gauge drops into a bounded customer mission, stabilizes it, proves the result, hands off, and exits.</p><a class="button secondary" href="#intake" data-service-lane="isolated_deployment_2500_plus">Choose deployment</a></article>
       </div>
     </section>
 
@@ -126,8 +131,17 @@
                 <option>Other</option>
               </select>
             </label>
-            <label>Asset / process / operation<input type="text" name="asset" placeholder="Name the thing that is failing" required></label>
+            <label>Service lane
+              <select id="service_lane" name="service_lane" required>
+                <option value="">Choose one</option>
+                <option value="file_reserve_25">$25 file / reserve</option>
+                <option value="diagnostic_250">$250 diagnostic</option>
+                <option value="isolated_deployment_2500_plus">$2,500+ isolated deployment</option>
+                <option value="custom_review">Owner review / scope first</option>
+              </select>
+            </label>
           </div>
+          <label>Asset / process / operation<input type="text" name="asset" placeholder="Name the thing that is failing" required></label>
           <label>Problem in exact words<textarea name="message" placeholder="What is happening, what should happen, and where it stops" required></textarea></label>
           <div class="row">
             <label>What changed before it started?<textarea name="what_changed"></textarea></label>
@@ -140,6 +154,7 @@
           <label class="check"><input type="checkbox" name="accurate_info" value="yes" required><span>I confirm this record is accurate to the best of my knowledge and understand that intake does not authorize additional work.</span></label>
           <button id="submit-button" type="submit">Create proof record</button>
           <pre id="result" aria-live="polite"></pre>
+          <div id="proof-actions" class="proof-actions"><a class="button" href="/pay" target="_blank" rel="noreferrer">Pay matching lane</a><button id="copy-proof" class="secondary" type="button">Copy proof reference</button></div>
         </form>
       </div>
     </section>
@@ -152,6 +167,10 @@
     const result = document.getElementById('result');
     const submitButton = document.getElementById('submit-button');
     const health = document.getElementById('health');
+    const serviceLane = document.getElementById('service_lane');
+    const proofActions = document.getElementById('proof-actions');
+    const copyProof = document.getElementById('copy-proof');
+    let currentProofReference = '';
 
     function show(message) {
       result.textContent = message;
@@ -167,6 +186,18 @@
         health.textContent = 'Gauge intake held';
       }
     }
+
+    document.querySelectorAll('[data-service-lane]').forEach((link) => {
+      link.addEventListener('click', () => {
+        serviceLane.value = link.dataset.serviceLane;
+      });
+    });
+
+    copyProof.addEventListener('click', async () => {
+      if (!currentProofReference) return;
+      await navigator.clipboard.writeText(currentProofReference).catch(() => {});
+      copyProof.textContent = 'Proof copied';
+    });
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
@@ -184,6 +215,7 @@
         message: formData.get('message'),
         metadata: {
           subject_type: formData.get('subject_type'),
+          service_lane: formData.get('service_lane'),
           what_changed: formData.get('what_changed'),
           prior_attempts: formData.get('prior_attempts'),
           payment_reference: formData.get('payment_reference'),
@@ -207,17 +239,27 @@
         document.getElementById('raw_hash').value = proof.raw_hash || '';
         document.getElementById('chosen_route').value = proof.route || '';
 
-        const mirrorResponse = await fetch('/', { method: 'POST', body: new FormData(form) });
-        mirrorStored = mirrorResponse.ok;
+        try {
+          const mirrorResponse = await fetch('/', { method: 'POST', body: new FormData(form) });
+          mirrorStored = mirrorResponse.ok;
+        } catch {
+          mirrorStored = false;
+        }
+
+        currentProofReference = proof.proof_reference || '';
+        proofActions.classList.add('show');
+        copyProof.textContent = 'Copy proof reference';
 
         show(
-          'RECEIVED\n' +
+          'RECORDED IN GAUGE\n' +
           'Proof: ' + proof.proof_reference + '\n' +
           'SHA-256: ' + proof.raw_hash + '\n' +
+          'Owner queue: connected\n' +
           'Status: held for GS&D source verification\n' +
-          'Evidence mirror: ' + (mirrorStored ? 'stored' : 'fallback required')
+          'Evidence copy: ' + (mirrorStored ? 'stored' : 'primary Gauge proof preserved') + '\n' +
+          'Payment note: include this proof reference with the matching lane.'
         );
-        if (mirrorStored) form.reset();
+        form.reset();
       } catch (error) {
         show(
           'HELD — NO EXTERNAL ACTION\n' +

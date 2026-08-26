@@ -3,127 +3,159 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Gauge Stack Controller</title>
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>GS&amp;D Gauge Master Control</title>
   <link rel="stylesheet" href="/gauge-stack-controller.css" />
 </head>
 <body>
   <main class="gauge-wrap">
     <section class="hero">
-      <p class="eyebrow">GS&D / WCCL Master Control</p>
-      <h1>Gauge Stack Controller</h1>
-      <p class="plain">
-        One place for Apps, Files, GPTs, Projects, Payments, Intake, Contracts,
-        Proof, Corrections, and Owner Review.
-      </p>
-      <div class="button-row">
-        <button id="syncButton">Sync Gauge Stack</button>
-        <button id="reloadButton">Reload Registry</button>
+      <div class="brand-lock">
+        <img class="gsd-logo" src="data:image/jpeg;base64,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" alt="Gauge Systems &amp; Diagnostics chrome gear and red needle logo" />
       </div>
-      <p id="syncStatus" class="status-line">Ready.</p>
+      <div class="hero-copy">
+        <p class="eyebrow">GS&amp;D Gauge • Protected Owner Control</p>
+        <h1>Gauge Master Control</h1>
+        <p class="plain">One operating body for intake, source verification, routing, payment state, assets, corrections, and proof.</p>
+        <div class="button-row">
+          <button id="syncButton" type="button">Run governed sync</button>
+          <button id="reloadButton" class="secondary" type="button">Reload control state</button>
+          <button id="lockButton" class="quiet" type="button">Lock owner session</button>
+        </div>
+        <p id="syncStatus" class="status-line" aria-live="polite">Owner key required. No customer data is loaded into this shell until authentication succeeds.</p>
+      </div>
     </section>
 
-    <section class="cards">
-      <button data-filter="Apps">Apps</button>
-      <button data-filter="Files">Files</button>
-      <button data-filter="GPTs">GPTs</button>
-      <button data-filter="Projects">Projects</button>
-      <button data-filter="Payments">Payments</button>
-      <button data-filter="Intake">Intake</button>
-      <button data-filter="Contracts">Contracts</button>
-      <button data-filter="Proof">Proof</button>
-      <button data-filter="Corrections">Corrections</button>
-      <button data-filter="Owner Review">Owner Review</button>
-      <button data-filter="All">Show All</button>
+    <section class="system-chain" aria-label="Gauge operating chain">
+      <span>Public GS&amp;D</span><b>→</b><span>Gauge Hub Intake</span><b>→</b><span>Source Check</span><b>→</b><span>Owner Route</span><b>→</b><span>Paid Boundary</span><b>→</b><span>Proof Record</span>
+    </section>
+
+    <section class="metrics" aria-label="Intake queue totals">
+      <article><strong id="metricTotal">0</strong><span>Total records</span></article>
+      <article><strong id="metricHeld">0</strong><span>Held for owner</span></article>
+      <article><strong id="metricReady">0</strong><span>Ready</span></article>
+      <article><strong id="metricActive">0</strong><span>Active</span></article>
+      <article><strong id="metricPayment">0</strong><span>Payment action</span></article>
+      <article><strong id="metricInvalid">0</strong><span>Proof failures</span></article>
+    </section>
+
+    <section class="panel intake-panel">
+      <div class="panel-head">
+        <div>
+          <p class="section-kicker">Live governed ingress</p>
+          <h2>Gauge Hub Intake Queue</h2>
+          <p>Public records arrive here with their original wording, hash, source class, and proof chain intact.</p>
+        </div>
+        <label class="compact-control">Show
+          <select id="intakeFilter">
+            <option value="open">Open work</option>
+            <option value="held">Held</option>
+            <option value="ready">Ready</option>
+            <option value="active">Active</option>
+            <option value="complete">Complete</option>
+            <option value="all">All records</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="intakeQueue" class="intake-queue">
+        <p class="empty-state">Authenticate to load the governed queue.</p>
+      </div>
+
+      <form id="intakeDecisionForm" class="decision-form" hidden>
+        <div class="decision-head wide-field">
+          <div>
+            <p class="section-kicker">Selected proof</p>
+            <h3 id="decisionTitle">No intake selected</h3>
+          </div>
+          <button id="closeDecisionButton" class="quiet" type="button">Close decision</button>
+        </div>
+        <input id="decisionRecordKey" type="hidden" />
+        <label>Proof reference<input id="decisionProofId" readonly /></label>
+        <label>One active route
+          <select id="decisionRoute" required>
+            <option value="hold">Hold for owner</option>
+            <option value="diagnostic_intake">Diagnostic intake</option>
+            <option value="estimate_intake">Estimate intake</option>
+            <option value="schedule_hold_for_owner">Schedule hold</option>
+            <option value="payment_gate">Payment gate</option>
+            <option value="owner_build_queue">Owner build queue</option>
+            <option value="owner_outbound_queue">Owner outbound queue</option>
+            <option value="archive_record">Archive record</option>
+          </select>
+        </label>
+        <label>Work state
+          <select id="decisionState" required>
+            <option value="held">Held</option>
+            <option value="ready">Ready</option>
+            <option value="active">Active</option>
+            <option value="complete">Complete</option>
+          </select>
+        </label>
+        <label>Service lane
+          <select id="decisionLane" required>
+            <option value="file_reserve_25">$25 file / reserve</option>
+            <option value="diagnostic_250">$250 diagnostic</option>
+            <option value="isolated_deployment_2500_plus">$2,500+ isolated deployment</option>
+            <option value="custom_review">Custom owner review</option>
+          </select>
+        </label>
+        <label>Payment state
+          <select id="decisionPayment" required>
+            <option value="not_required">Not required</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="proof_submitted">Proof submitted</option>
+            <option value="paid">Paid / verified</option>
+          </select>
+        </label>
+        <label>Payment proof / reference<input id="decisionPaymentReference" maxlength="500" placeholder="Required before marking paid" /></label>
+        <label class="wide-field">Exact owner decision note<textarea id="decisionNote" maxlength="2000" required placeholder="State what was verified and the single controlled next route."></textarea></label>
+        <div class="wide-field button-row">
+          <button id="recordDecisionButton" type="submit">Append owner decision to proof</button>
+          <p id="decisionStatus" class="status-line" aria-live="polite">No change written.</p>
+        </div>
+      </form>
+    </section>
+
+    <section class="cards" aria-label="Registry filters">
+      <button data-filter="Apps">Apps</button><button data-filter="Files">Files</button><button data-filter="GPTs">GPTs</button><button data-filter="Projects">Projects</button><button data-filter="Payments">Payments</button><button data-filter="Intake">Intake</button><button data-filter="Contracts">Contracts</button><button data-filter="Proof">Proof</button><button data-filter="Corrections">Corrections</button><button data-filter="Owner Review">Owner Review</button><button data-filter="All">Show all assets</button>
     </section>
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Master Asset Registry</h2>
-        <p>Every item gets one status and one next action.</p>
+        <div><p class="section-kicker">Controlled inventory</p><h2>Master Asset Registry</h2></div>
+        <p>One status and one next action per asset.</p>
       </div>
-
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>Asset</th>
-              <th>Type</th>
-              <th>Status</th>
-              <th>Link</th>
-              <th>Notes</th>
-              <th>Last Checked</th>
-            </tr>
-          </thead>
-          <tbody id="assetRows">
-            <tr><td colspan="6">Loading registry…</td></tr>
-          </tbody>
+          <thead><tr><th>Asset</th><th>Type</th><th>Status</th><th>Link</th><th>Notes</th><th>Last checked</th></tr></thead>
+          <tbody id="assetRows"><tr><td colspan="6">Loading registry…</td></tr></tbody>
         </table>
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Corrections Log</h2>
-        <p>Owner-only fixes, breaks, and exact corrections.</p>
+        <div><p class="section-kicker">Immutable owner record</p><h2>Corrections Log</h2></div>
+        <p>Fixes, breaks, and exact owner corrections are hash-deduplicated.</p>
       </div>
 
       <form id="correctionForm" class="correction-form">
-        <label>
-          Target asset
-          <select id="correctionAsset" required>
-            <option value="">Select a governed asset</option>
-          </select>
-        </label>
-        <label>
-          Record type
-          <select id="correctionType" required>
-            <option value="Owner Correction">Owner Correction</option>
-            <option value="Fix">Fix</option>
-            <option value="Break">Break</option>
-          </select>
-        </label>
-        <label>
-          Previous state
-          <input id="previousState" maxlength="500" placeholder="What was wrong or incomplete" />
-        </label>
-        <label>
-          Corrected state
-          <input id="correctedState" maxlength="500" required placeholder="What is true now" />
-        </label>
-        <label class="wide-field">
-          Exact correction
-          <textarea id="correctionText" maxlength="2000" required placeholder="Record the exact owner correction."></textarea>
-        </label>
-        <label class="wide-field">
-          Proof reference
-          <input id="correctionProof" maxlength="500" placeholder="Proof ID, file hash, deploy ID, or governed URL" />
-        </label>
-        <div class="wide-field button-row">
-          <button id="recordCorrectionButton" type="submit">Record Correction</button>
-          <p id="correctionStatus" class="status-line" aria-live="polite">Ready.</p>
-        </div>
+        <label>Target asset<select id="correctionAsset" required><option value="">Select a governed asset</option></select></label>
+        <label>Record type<select id="correctionType" required><option value="Owner Correction">Owner Correction</option><option value="Fix">Fix</option><option value="Break">Break</option></select></label>
+        <label>Previous state<input id="previousState" maxlength="500" placeholder="What was wrong or incomplete" /></label>
+        <label>Corrected state<input id="correctedState" maxlength="500" required placeholder="What is true now" /></label>
+        <label class="wide-field">Exact correction<textarea id="correctionText" maxlength="2000" required placeholder="Record the exact owner correction."></textarea></label>
+        <label class="wide-field">Proof reference<input id="correctionProof" maxlength="500" placeholder="Proof ID, file hash, deploy ID, or governed URL" /></label>
+        <div class="wide-field button-row"><button id="recordCorrectionButton" type="submit">Record correction</button><p id="correctionStatus" class="status-line" aria-live="polite">Ready.</p></div>
       </form>
-
-      <ol id="correctionsLog" class="actions">
-        <li>No corrections recorded yet.</li>
-      </ol>
+      <ol id="correctionsLog" class="actions"><li>No corrections recorded yet.</li></ol>
     </section>
 
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Next Action List</h2>
-        <p>Fix the next true thing.</p>
-      </div>
-      <ol id="nextActions" class="actions"></ol>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Latest Proof Log</h2>
-        <p>Sync proof writes here.</p>
-      </div>
-      <ol id="proofLog" class="actions"></ol>
-    </section>
+    <div class="split-panels">
+      <section class="panel"><div class="panel-head"><div><p class="section-kicker">Dispatcher output</p><h2>Next Actions</h2></div></div><ol id="nextActions" class="actions"></ol></section>
+      <section class="panel"><div class="panel-head"><div><p class="section-kicker">System evidence</p><h2>Latest Proof Log</h2></div></div><ol id="proofLog" class="actions"></ol></section>
+    </div>
   </main>
 
   <script src="/gauge-stack-controller.js"></script>

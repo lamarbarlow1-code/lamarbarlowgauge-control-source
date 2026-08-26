@@ -17,6 +17,7 @@ export default async () => {
 export const config: Config = {
   path: [
     "/controller",
+    "/controller/",
     "/gauge-stack-controller.html",
     "/gauge-stack-controller.js",
     "/gauge-stack-controller.css",

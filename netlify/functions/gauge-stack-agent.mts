@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import type { Config, Context } from "@netlify/functions";
 import { getStore } from "@netlify/blobs";
+import {
+  applyOwnerControl,
+  IntakeValidationError,
+  verifyIntakeProofRecord,
+} from "./gauge-owner-control.js";
 
 type GaugeStatus =
   | "Live"
@@ -77,9 +82,49 @@ type Correction = {
   created_at: string;
 };
 
+type PublicIntakeRecord = {
+  schema_version: string;
+  ingress_id: string;
+  proof_id: string;
+  received_at: string;
+  raw_input: {
+    source?: string;
+    channel?: string;
+    name?: string | null;
+    contact?: string | null;
+    asset?: string | null;
+    exact_wording?: string;
+    metadata?: Record<string, unknown>;
+  };
+  raw_sha256: string;
+  source_check: string;
+  chosen_route: string;
+  result: string;
+  proof_chain: Array<Record<string, unknown>>;
+  proof_head: string;
+  owner_control?: {
+    route?: string;
+    state?: string;
+    service_lane?: string;
+    payment_status?: string;
+    payment_reference?: string | null;
+    owner_note?: string;
+    decision_hash?: string;
+    updated_at?: string;
+  };
+  [key: string]: unknown;
+};
+
+type OwnerIntakeRecord = PublicIntakeRecord & {
+  record_key: string;
+  proof_valid: boolean;
+};
+
 class CorrectionValidationError extends Error {}
+class IntakeConflictError extends Error {}
 
 const STORE_NAME = "gauge-stack-control";
+const INGRESS_STORE_NAME = "gauge-public-ingress";
 const REGISTRY_KEY = "registry.json";
 const PROOF_KEY = "proof-log.json";
 const ACTIONS_KEY = "next-actions.json";
@@ -93,6 +138,10 @@ function makeId(prefix: string) {
 
 function getBlobStore() {
   return getStore({ name: STORE_NAME, consistency: "strong" });
+}
+
+function getIngressStore() {
+  return getStore({ name: INGRESS_STORE_NAME, consistency: "strong" });
 }
 
 function hashOwnerKey(value: string) {
@@ -287,6 +336,32 @@ const starterAssets: GaugeAsset[] = [
   },
 ];
 
+const CONNECTED_ASSET_PATCHES: Record<string, Partial<GaugeAsset>> = {
+  "asset-stack-controller": {
+    asset_name: "Gauge Master Control",
+    asset_url: "/controller",
+    source: "Master Control",
+    status: "Live",
+    proof_needed: false,
+    notes: "Owner controller for registry, public intake queue, routing, payment state, corrections, and proof.",
+  },
+  "asset-agent-backend": {
+    asset_name: "Gauge Master Controller agent",
+    source: "Netlify Function + Blobs",
+    status: "Live",
+    proof_needed: false,
+    notes: "Owner-authenticated controller reads both governed registry and public ingress proof records.",
+  },
+  "asset-intake": {
+    asset_name: "Gauge Hub Intake queue",
+    asset_url: "/intake",
+    source: "Gauge Public Ingress → Master Control",
+    status: "Live",
+    proof_needed: false,
+    notes: "Exact public input, source check, route decision, payment state, and owner action stay on one proof chain.",
+  },
+};
+
 async function readJSON<T>(key: string, fallback: T): Promise<T> {
   const store = getBlobStore();
   const data = await store.get(key, { type: "json" });
@@ -304,7 +379,19 @@ async function readAssets() {
     await writeJSON(REGISTRY_KEY, starterAssets);
     return starterAssets;
   }
-  return assets;
+
+  let changed = false;
+  const connectedAssets = assets.map((asset) => {
+    const patch = CONNECTED_ASSET_PATCHES[asset.id];
+    if (!patch) return asset;
+    const needsPatch = Object.entries(patch).some(([key, value]) => asset[key as keyof GaugeAsset] !== value);
+    if (!needsPatch) return asset;
+    changed = true;
+    return { ...asset, ...patch, updated_at: new Date().toISOString() };
+  });
+
+  if (changed) await writeJSON(REGISTRY_KEY, connectedAssets);
+  return connectedAssets;
 }
 
 function classifyAsset(asset: GaugeAsset): GaugeStatus {
@@ -472,22 +559,128 @@ async function addCorrection(input: unknown) {
   };
 }
 
+async function readPublicIntakes() {
+  const ingress = getIngressStore();
+  const listing = await ingress.list({ prefix: "records/" });
+  const keys = listing.blobs
+    .map((blob) => blob.key)
+    .filter((key) => /^records\/[a-f0-9]{64}\.json$/.test(key))
+    .slice(0, 2000);
+  const records: OwnerIntakeRecord[] = [];
+
+  for (let index = 0; index < keys.length; index += 25) {
+    const batch = keys.slice(index, index + 25);
+    const loaded = await Promise.all(batch.map(async (recordKey) => {
+      const record = await ingress.get(recordKey, { type: "json" }) as PublicIntakeRecord | null;
+      if (!record || typeof record !== "object" || !record.proof_id) return null;
+      return {
+        ...record,
+        record_key: recordKey,
+        proof_valid: verifyIntakeProofRecord(record),
+      } as OwnerIntakeRecord;
+    }));
+    records.push(...loaded.filter((record): record is OwnerIntakeRecord => Boolean(record)));
+  }
+
+  return records.sort((left, right) => {
+    const leftDate = Date.parse(left.owner_control?.updated_at || left.received_at || "") || 0;
+    const rightDate = Date.parse(right.owner_control?.updated_at || right.received_at || "") || 0;
+    return rightDate - leftDate;
+  });
+}
+
+function summarizeIntakes(intakes: OwnerIntakeRecord[]) {
+  const currentState = (intake: OwnerIntakeRecord) => intake.owner_control?.state || "held";
+  return {
+    total: intakes.length,
+    held: intakes.filter((intake) => currentState(intake) === "held").length,
+    ready: intakes.filter((intake) => currentState(intake) === "ready").length,
+    active: intakes.filter((intake) => currentState(intake) === "active").length,
+    complete: intakes.filter((intake) => currentState(intake) === "complete").length,
+    needs_payment: intakes.filter((intake) => {
+      const payment = intake.owner_control?.payment_status;
+      const route = intake.owner_control?.route || intake.chosen_route;
+      return payment === "unpaid" || payment === "proof_submitted" || route === "payment_gate";
+    }).length,
+    invalid_proof: intakes.filter((intake) => !intake.proof_valid).length,
+  };
+}
+
+async function updatePublicIntake(input: unknown) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new IntakeValidationError("Owner intake decision is required.");
+  }
+
+  const raw = input as Record<string, unknown>;
+  const recordKey = String(raw.record_key || "").trim();
+  if (!/^records\/[a-f0-9]{64}\.json$/.test(recordKey)) {
+    throw new IntakeValidationError("Governed intake record key is invalid.");
+  }
+
+  const ingress = getIngressStore();
+  const snapshot = await ingress.getWithMetadata(recordKey, { type: "json" });
+  if (!snapshot?.data) throw new IntakeValidationError("Governed intake record was not found.");
+  if (!snapshot.etag) throw new IntakeConflictError("Intake record version could not be locked. Reload and try again.");
+
+  const update = applyOwnerControl(snapshot.data as PublicIntakeRecord, raw);
+  if (update.deduped) {
+    return {
+      ok: true,
+      message: "Exact owner decision already exists; no duplicate proof event was added.",
+      deduped: true,
+      intake: {
+        ...update.record,
+        record_key: recordKey,
+        proof_valid: true,
+      },
+    };
+  }
+
+  const write = await ingress.setJSON(recordKey, update.record, { onlyIfMatch: snapshot.etag });
+  if (!write.modified) {
+    throw new IntakeConflictError("This intake changed during the decision. Reload it before writing.");
+  }
+
+  const verified = await ingress.get(recordKey, { type: "json" }) as PublicIntakeRecord | null;
+  if (!verified || verified.proof_head !== update.record.proof_head || !verifyIntakeProofRecord(verified)) {
+    throw new IntakeConflictError("Owner decision write did not verify against the proof chain.");
+  }
+
+  return {
+    ok: true,
+    message: "Owner route, work state, and payment state appended to the original proof record.",
+    deduped: false,
+    intake: {
+      ...verified,
+      record_key: recordKey,
+      proof_valid: true,
+    },
+  };
+}
+
 export default async (req: Request, context: Context) => {
   try {
     const authError = requireOwnerKey(req);
     if (authError) return authError;
 
     if (req.method === "GET") {
-      const assets = await readAssets();
-      const actions = await readJSON<NextAction[]>(ACTIONS_KEY, []);
-      const proof_log = await readJSON<ProofLog[]>(PROOF_KEY, []);
-      const corrections = await readJSON<Correction[]>(CORRECTIONS_KEY, []);
+      const [assets, actions, proof_log, corrections, intakes] = await Promise.all([
+        readAssets(),
+        readJSON<NextAction[]>(ACTIONS_KEY, []),
+        readJSON<ProofLog[]>(PROOF_KEY, []),
+        readJSON<Correction[]>(CORRECTIONS_KEY, []),
+        readPublicIntakes(),
+      ]);
       return json({
         ok: true,
+        system: "GS&D Gauge Master Control",
+        version: "3.0-connected-control",
         assets,
         actions,
         proof_log: proof_log.slice(0, 25),
         corrections: corrections.slice(0, 100),
+        intakes: intakes.slice(0, 500),
+        intake_stats: summarizeIntakes(intakes),
       });
     }
 
@@ -507,7 +700,11 @@ export default async (req: Request, context: Context) => {
         return json(await addCorrection(body.correction));
       }
 
-      return json({ ok: false, error: "Use action: sync, saveRegistry, or addCorrection." }, 400);
+      if (body.action === "updateIntake") {
+        return json(await updatePublicIntake(body.intake));
+      }
+
+      return json({ ok: false, error: "Use action: sync, saveRegistry, addCorrection, or updateIntake." }, 400);
     }
 
     return json({ ok: false, error: "Use GET or POST." }, 405);
@@ -517,7 +714,11 @@ export default async (req: Request, context: Context) => {
         ok: false,
         error: error instanceof Error ? error.message : "Unknown Gauge Agent error.",
       },
-      error instanceof CorrectionValidationError ? 400 : 500
+      error instanceof CorrectionValidationError || error instanceof IntakeValidationError
+        ? 400
+        : error instanceof IntakeConflictError
+          ? 409
+          : 500
     );
   }
 };

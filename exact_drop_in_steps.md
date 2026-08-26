@@ -10,25 +10,26 @@ public/gauge-stack-controller.js
 netlify/functions/gauge-stack-agent.mts
 package.json
 
-2. Add this link to the existing main page:
+2. Keep the public adapter and its `gauge-public-ingress` Blob store on the same
+   existing site. Master Control now reads those records directly.
+
+3. Add this link to the existing main page:
 
 <a href="/gauge-stack-controller.html">Open Gauge Stack Controller</a>
 
-3. Redeploy the same Netlify project:
+4. Redeploy the same Netlify project:
 
 gsd-gauge-master-control
 
-4. Open:
+5. Open:
 
-https://gsd-gauge-master-control.netlify.app/gauge-stack-controller.html
+https://gsd-gauge-master-control.netlify.app/controller
 
-5. Press:
+6. Authenticate with the owner key, review the Intake Queue, and press:
 
 Sync Gauge Stack
 
-No Supabase keys needed.
-No new app.
-No new scattered system.
+No Supabase keys needed. No replacement app. No second intake database.
 
 
 Recommended production custody setting:

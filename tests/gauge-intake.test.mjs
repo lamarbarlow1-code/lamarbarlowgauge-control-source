@@ -82,3 +82,13 @@ test("proof-chain tampering is detected", () => {
 
   assert.equal(verifyProofRecord(record), false);
 });
+
+test("raw-input tampering is detected even when proof entries are untouched", () => {
+  const record = createProofRecord(
+    { source: "form", message: "Preserve these exact original words." },
+    { receivedAt: fixedTime }
+  );
+  record.raw_input.exact_wording = "changed after ingress";
+
+  assert.equal(verifyProofRecord(record), false);
+});

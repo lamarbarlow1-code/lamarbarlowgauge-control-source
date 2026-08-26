@@ -12,6 +12,7 @@ const controllerAssets = [
 
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
+await mkdir(resolve(outputDir, "controller"), { recursive: true });
 await copyFile(resolve(projectRoot, "index.html"), resolve(outputDir, "index.html"));
 
 for (const asset of controllerAssets) {
@@ -21,4 +22,9 @@ for (const asset of controllerAssets) {
   );
 }
 
-console.log("Built public adapter and owner controller shell in dist/.");
+await copyFile(
+  resolve(projectRoot, "public", "gauge-stack-controller.html"),
+  resolve(outputDir, "controller", "index.html"),
+);
+
+console.log("Built connected public adapter and owner controller in dist/.");

@@ -184,6 +184,9 @@ export function createProofRecord(input, options = {}) {
 }
 
 export function verifyProofRecord(record) {
+  if (!record?.raw_input || sha256(record.raw_input) !== record.raw_sha256) return false;
+  if (record.proof_chain?.[0]?.payload?.raw_sha256 !== record.raw_sha256) return false;
+
   let previousHash = null;
   for (const entry of record.proof_chain || []) {
     if (entry.previous_hash !== previousHash) return false;
