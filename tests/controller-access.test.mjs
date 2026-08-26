@@ -104,6 +104,8 @@ test("master control uses the locked GS&D logo and black, chrome, gunmetal, stee
   assert.equal(publicLogo.length, 90721);
   assert.equal(publicLogoHash, "493fc284429cf02a94bf335a4c640328eeffac533f56fef5974c93652e8ccc38");
   assert.equal(controllerLogoHash, publicLogoHash);
+  assert.match(publicHtml, /gsdtexas\.com@gmail\.com/);
+  assert.doesNotMatch(publicHtml, /gaugesystems515@gmail\.com/);
   assert.match(css, /--black:\s*#000000/);
   assert.match(css, /--gunmetal:\s*#343438/);
   assert.match(css, /--steel:\s*#807e80/);
