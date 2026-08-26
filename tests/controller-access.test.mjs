@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
@@ -96,6 +97,13 @@ test("master control uses the locked GS&D logo and black, chrome, gunmetal, stee
 
   assert.match(publicHtml, /src="data:image\/jpeg;base64,/);
   assert.match(controllerHtml, /src="data:image\/jpeg;base64,/);
+  const publicLogo = Buffer.from(publicHtml.match(/class="master-logo" src="data:image\/jpeg;base64,([^"]+)/)[1], "base64");
+  const controllerLogo = Buffer.from(controllerHtml.match(/class="gsd-logo" src="data:image\/jpeg;base64,([^"]+)/)[1], "base64");
+  const publicLogoHash = crypto.createHash("sha256").update(publicLogo).digest("hex");
+  const controllerLogoHash = crypto.createHash("sha256").update(controllerLogo).digest("hex");
+  assert.equal(publicLogo.length, 90721);
+  assert.equal(publicLogoHash, "493fc284429cf02a94bf335a4c640328eeffac533f56fef5974c93652e8ccc38");
+  assert.equal(controllerLogoHash, publicLogoHash);
   assert.match(css, /--black:\s*#000000/);
   assert.match(css, /--gunmetal:\s*#343438/);
   assert.match(css, /--steel:\s*#807e80/);
