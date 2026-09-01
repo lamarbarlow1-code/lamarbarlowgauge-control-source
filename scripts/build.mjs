@@ -14,6 +14,7 @@ await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
 await mkdir(resolve(outputDir, "controller"), { recursive: true });
 await copyFile(resolve(projectRoot, "index.html"), resolve(outputDir, "index.html"));
+await copyFile(resolve(projectRoot, "pay.html"), resolve(outputDir, "pay.html"));
 
 for (const asset of controllerAssets) {
   await copyFile(

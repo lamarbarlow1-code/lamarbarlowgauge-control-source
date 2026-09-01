@@ -14,6 +14,9 @@ governed intake records to the owner-only Master Control API.
   them into a second intake system.
 - Owner route, work state, service lane, and payment state append an
   `owner_control` event to the original proof chain.
+- The payment handoff carries the governed lane, amount, proof reference, and
+  intake hash forward. A customer receipt appends a `payment_submission` event
+  to that same record and remains unverified until the owner confirms it.
 - Raw-input changes, proof-entry changes, and broken hash links fail verification.
 - Conditional Blob writes prevent an owner decision from overwriting a newer
   record version.
@@ -25,7 +28,10 @@ governed intake records to the owner-only Master Control API.
 - `/api/gauge-intake` — public proof-record ingress
 - `/controller` and `/gauge-stack-controller.html` — Master Control shell
 - `/api/gauge-stack-agent` — owner-key authenticated control API
-- `/pay`, `/cashapp` — `$GaugeSystems` payment route
+- `/pay` — proof-bound amount and receipt handoff
+- `/cashapp` — external `$GaugeSystems` Cash App profile
+- `/api/gauge-payment-proof` — append a customer receipt reference to the
+  original governed intake
 
 ## Stores
 

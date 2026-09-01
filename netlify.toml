@@ -23,8 +23,8 @@
 
 [[redirects]]
   from = "/pay"
-  to = "https://cash.app/$GaugeSystems"
-  status = 302
+  to = "/pay.html"
+  status = 200
 
 [[redirects]]
   from = "/cashapp"

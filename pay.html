@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Complete a GS&D Gauge intake payment and attach the receipt to the same proof record.">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <title>Gauge | Complete Payment</title>
+  <style>
+    :root{
+      color-scheme:dark;
+      --black:#000;
+      --ink:#050609;
+      --gunmetal:#343438;
+      --steel:#807e80;
+      --chrome:#cdc9c9;
+      --red:#d91c1c;
+      --green:#35cf70;
+      --white:#f7f7f7;
+      font-family:Inter,Arial,sans-serif;
+      background:var(--black);
+      color:var(--white)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 72% 0,rgba(217,28,28,.18),transparent 34%),var(--black)}
+    a{color:inherit}
+    .wrap{width:min(920px,calc(100% - 32px));margin:auto}
+    header{border-bottom:1px solid rgba(205,201,201,.18);background:rgba(0,0,0,.9)}
+    nav{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{font-size:20px;font-weight:950;letter-spacing:.08em;text-decoration:none}
+    .brand span,.red{color:var(--red)}
+    .back{color:var(--chrome);font-weight:850}
+    main{padding:60px 0 74px}
+    .eyebrow{margin:0 0 12px;color:var(--red);font-weight:900;letter-spacing:.12em;text-transform:uppercase}
+    h1{margin:0;font-size:clamp(42px,7vw,76px);line-height:.96;letter-spacing:-.045em}
+    .lead{font-size:20px;line-height:1.5;color:var(--chrome);max-width:720px}
+    .grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:18px;margin-top:30px;align-items:start}
+    .panel{border:1px solid rgba(205,201,201,.2);border-radius:18px;background:linear-gradient(145deg,rgba(35,26,30,.9),rgba(5,6,9,.98));padding:24px}
+    h2{margin:0 0 14px;font-size:26px}
+    .amount{font-size:48px;font-weight:950;line-height:1;color:var(--white);margin:10px 0}
+    .lane-name{color:var(--chrome);font-weight:850}
+    .proof-box{margin:20px 0;padding:14px;border-radius:10px;background:#050609;border:1px solid var(--gunmetal)}
+    .proof-box small{display:block;color:var(--steel);font-weight:850;text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+    .proof-box code{display:block;word-break:break-all;color:var(--white);font-size:13px}
+    .steps{margin:18px 0 0;padding-left:22px;color:var(--chrome);line-height:1.55}
+    .steps li{padding:5px 0}
+    .button,button{display:inline-flex;align-items:center;justify-content:center;width:100%;min-height:50px;padding:13px 18px;border:0;border-radius:9px;background:var(--red);color:white;text-decoration:none;font:inherit;font-weight:900;cursor:pointer}
+    .button.secondary,button.secondary{background:var(--gunmetal);border:1px solid var(--steel)}
+    .button.disabled,button:disabled{opacity:.48;cursor:not-allowed;pointer-events:none}
+    .button-row{display:grid;gap:10px;margin-top:18px}
+    form{display:grid;gap:14px}
+    label{display:block;font-size:14px;font-weight:850;color:var(--chrome)}
+    input,select{width:100%;margin-top:7px;padding:13px;border:1px solid rgba(205,201,201,.3);border-radius:9px;background:#050609;color:white;font:inherit}
+    input[readonly]{color:var(--chrome)}
+    .notice{padding:13px 14px;border-left:4px solid var(--red);border-radius:8px;background:rgba(217,28,28,.1);color:var(--chrome);line-height:1.5}
+    .notice.good{border-left-color:var(--green);background:rgba(53,207,112,.1)}
+    .fine{color:var(--steel);font-size:13px;line-height:1.5}
+    pre{display:none;white-space:pre-wrap;word-break:break-word;margin:0;padding:15px;border-radius:10px;background:#050609;border:1px solid var(--gunmetal);font:14px/1.5 ui-monospace,monospace}
+    pre.show{display:block}
+    footer{padding:30px 0;border-top:1px solid rgba(205,201,201,.16);color:var(--steel)}
+    @media(max-width:720px){main{padding-top:42px}.grid{grid-template-columns:1fr}.back{font-size:13px}}
+  </style>
+</head>
+<body>
+  <header>
+    <nav class="wrap">
+      <a class="brand" href="https://gsd-texas.com">GS<span>&amp;</span>D / GAUGE</a>
+      <a class="back" href="/intake">Back to intake</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <p class="eyebrow">Exact amount • Exact proof • One record</p>
+    <h1>Complete the <span class="red">payment handoff.</span></h1>
+    <p class="lead">Your payment note and receipt reference stay tied to the same Gauge intake. A submitted receipt is held for GS&amp;D owner verification before work starts.</p>
+
+    <div class="grid">
+      <section class="panel" aria-labelledby="selected-lane-title">
+        <h2 id="selected-lane-title">Selected lane</h2>
+        <div id="amount" class="amount">—</div>
+        <div id="lane-name" class="lane-name">Choose an intake lane</div>
+        <div class="proof-box">
+          <small>Payment note</small>
+          <code id="proof-display">Create an intake to receive a proof reference</code>
+        </div>
+        <div id="lane-notice" class="notice">A Gauge proof reference is required before payment can be matched to work.</div>
+        <ol class="steps">
+          <li>Open Cash App and send the exact amount shown.</li>
+          <li>Put the Gauge proof reference in the payment note.</li>
+          <li>Return here and attach the Cash App receipt or transaction reference.</li>
+        </ol>
+        <div class="button-row">
+          <button id="copy-proof" class="secondary" type="button" disabled>Copy payment note</button>
+          <a id="cashapp-button" class="button disabled" href="/cashapp" target="_blank" rel="noreferrer" aria-disabled="true">Open $GaugeSystems in Cash App</a>
+        </div>
+        <p class="fine">Cash App does not insert the amount or note from this page. Confirm both before sending. A receipt submission is not marked paid until GS&amp;D verifies it.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="receipt-title">
+        <h2 id="receipt-title">Attach the receipt</h2>
+        <form id="payment-proof-form">
+          <label>Service lane
+            <select id="service-lane" name="service_lane" required>
+              <option value="">Choose one</option>
+              <option value="file_reserve_25">$25 file / reserve</option>
+              <option value="diagnostic_250">$250 diagnostic</option>
+              <option value="isolated_deployment_2500_plus">$2,500+ isolated deployment</option>
+            </select>
+          </label>
+          <label>Gauge proof reference
+            <input id="proof-reference" name="proof_reference" type="text" readonly required placeholder="Created by Gauge intake">
+          </label>
+          <input id="raw-hash" name="raw_hash" type="hidden">
+          <label>Cash App receipt / transaction reference
+            <input id="payment-reference" name="payment_reference" type="text" maxlength="500" required placeholder="Paste the receipt or transaction reference">
+          </label>
+          <button id="submit-proof" type="submit" disabled>Submit payment proof</button>
+          <pre id="result" aria-live="polite"></pre>
+        </form>
+        <div id="missing-intake" class="button-row">
+          <a class="button secondary" href="/intake#intake">Create the intake first</a>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer><div class="wrap"><strong>Gauge Systems &amp; Diagnostics</strong><br>Payment proof is appended to the existing governed intake; it does not create a second customer record.</div></footer>
+
+  <script>
+    const lanes = {
+      file_reserve_25: { amount: '$25', name: 'File / reserve', direct: true },
+      diagnostic_250: { amount: '$250', name: 'Diagnostic intake', direct: true },
+      isolated_deployment_2500_plus: { amount: '$2,500+', name: 'Isolated deployment', direct: false }
+    };
+    const params = new URLSearchParams(window.location.search);
+    const form = document.getElementById('payment-proof-form');
+    const serviceLane = document.getElementById('service-lane');
+    const proofReference = document.getElementById('proof-reference');
+    const rawHash = document.getElementById('raw-hash');
+    const paymentReference = document.getElementById('payment-reference');
+    const amount = document.getElementById('amount');
+    const laneName = document.getElementById('lane-name');
+    const proofDisplay = document.getElementById('proof-display');
+    const laneNotice = document.getElementById('lane-notice');
+    const cashappButton = document.getElementById('cashapp-button');
+    const copyProof = document.getElementById('copy-proof');
+    const submitProof = document.getElementById('submit-proof');
+    const missingIntake = document.getElementById('missing-intake');
+    const result = document.getElementById('result');
+
+    const requestedLane = params.get('lane') || '';
+    if (lanes[requestedLane]) serviceLane.value = requestedLane;
+    proofReference.value = params.get('proof') || '';
+    rawHash.value = params.get('hash') || '';
+
+    function hasGovernedIntake() {
+      return /^GSD-[A-F0-9]{32}$/.test(proofReference.value) && /^[a-f0-9]{64}$/.test(rawHash.value);
+    }
+
+    function renderSelection() {
+      const lane = lanes[serviceLane.value];
+      const hasIntake = hasGovernedIntake();
+      amount.textContent = lane ? lane.amount : '—';
+      laneName.textContent = lane ? lane.name : 'Choose an intake lane';
+      proofDisplay.textContent = hasIntake ? proofReference.value : 'Create an intake to receive a proof reference';
+      copyProof.disabled = !hasIntake;
+      missingIntake.hidden = hasIntake;
+
+      const directPaymentReady = Boolean(lane?.direct && hasIntake);
+      cashappButton.classList.toggle('disabled', !directPaymentReady);
+      cashappButton.setAttribute('aria-disabled', String(!directPaymentReady));
+      submitProof.disabled = !directPaymentReady;
+
+      if (!hasIntake) {
+        laneNotice.className = 'notice';
+        laneNotice.textContent = 'Create the Gauge intake first so the payment has an exact proof reference.';
+      } else if (!lane) {
+        laneNotice.className = 'notice';
+        laneNotice.textContent = 'Choose the same lane recorded on the Gauge intake.';
+      } else if (!lane.direct) {
+        laneNotice.className = 'notice';
+        laneNotice.textContent = 'Deployment starts at $2,500. Do not send payment until GS&D confirms the exact scope and amount.';
+      } else {
+        laneNotice.className = 'notice good';
+        laneNotice.textContent = 'Ready: send ' + lane.amount + ' to $GaugeSystems with ' + proofReference.value + ' in the note.';
+      }
+    }
+
+    cashappButton.addEventListener('click', (event) => {
+      if (cashappButton.getAttribute('aria-disabled') === 'true') event.preventDefault();
+    });
+
+    copyProof.addEventListener('click', async () => {
+      if (!hasGovernedIntake()) return;
+      await navigator.clipboard.writeText(proofReference.value).catch(() => {});
+      copyProof.textContent = 'Payment note copied';
+    });
+
+    serviceLane.addEventListener('change', renderSelection);
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!hasGovernedIntake() || !lanes[serviceLane.value]?.direct) return;
+      submitProof.disabled = true;
+      result.textContent = 'Appending payment proof to the governed intake...';
+      result.classList.add('show');
+
+      try {
+        const response = await fetch('/api/gauge-payment-proof', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            proof_reference: proofReference.value,
+            raw_hash: rawHash.value,
+            service_lane: serviceLane.value,
+            payment_reference: paymentReference.value
+          })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.ok) throw new Error(data.message || data.error || 'payment_proof_failed');
+
+        result.textContent =
+          'PAYMENT PROOF SUBMITTED\n' +
+          'Gauge proof: ' + data.proof_reference + '\n' +
+          'Submission: ' + data.submission_reference + '\n' +
+          'Status: owner verification required\n' +
+          'No duplicate customer record created.';
+        paymentReference.readOnly = true;
+      } catch (error) {
+        result.textContent =
+          'PAYMENT PROOF HELD\n' +
+          'Nothing was marked paid.\n' +
+          'Email the receipt and Gauge proof to gsdtexas.com@gmail.com.\n' +
+          'Error: ' + error.message;
+        submitProof.disabled = false;
+      }
+    });
+
+    renderSelection();
+  </script>
+</body>
+</html>

@@ -137,8 +137,16 @@ function activeRoute(intake) {
 }
 
 function activeLane(intake) {
-  const lane = intake.owner_control?.service_lane || intake.raw_input?.metadata?.service_lane;
+  const lane = intake.owner_control?.service_lane || intake.public_payment_submission?.service_lane || intake.raw_input?.metadata?.service_lane;
   return validLanes.has(lane) ? lane : "custom_review";
+}
+
+function activePaymentState(intake) {
+  return intake.owner_control?.payment_status || intake.public_payment_submission?.payment_status || (intake.raw_input?.metadata?.payment_reference ? "proof_submitted" : "unpaid");
+}
+
+function activePaymentReference(intake) {
+  return intake.owner_control?.payment_reference || intake.public_payment_submission?.payment_reference || intake.raw_input?.metadata?.payment_reference || "";
 }
 
 function renderMetrics() {
@@ -184,7 +192,7 @@ function renderIntakes() {
           <div><dt>Source</dt><dd>${escapeHtml(words(intake.source_check))}</dd></div>
           <div><dt>Current route</dt><dd>${escapeHtml(words(activeRoute(intake)))}</dd></div>
           <div><dt>Lane</dt><dd>${escapeHtml(words(activeLane(intake)))}</dd></div>
-          <div><dt>Payment</dt><dd>${escapeHtml(words(control.payment_status || "unpaid"))}</dd></div>
+          <div><dt>Payment</dt><dd>${escapeHtml(words(activePaymentState(intake)))}</dd></div>
         </dl>
         ${control.owner_note ? `<p class="owner-note"><strong>Owner:</strong> ${escapeHtml(control.owner_note)}</p>` : ""}
         <div class="intake-card-actions">
@@ -209,8 +217,8 @@ function selectIntake(recordKey) {
   decisionRoute.value = validRoutes.has(route) ? route : "hold";
   decisionState.value = control.state || "held";
   decisionLane.value = activeLane(intake);
-  decisionPayment.value = control.payment_status || (raw.metadata?.payment_reference ? "proof_submitted" : "unpaid");
-  decisionPaymentReference.value = control.payment_reference || raw.metadata?.payment_reference || "";
+  decisionPayment.value = activePaymentState(intake);
+  decisionPaymentReference.value = activePaymentReference(intake);
   decisionNote.value = control.owner_note || "";
   decisionStatus.textContent = "Review the exact record. No change has been written.";
   intakeDecisionForm.hidden = false;

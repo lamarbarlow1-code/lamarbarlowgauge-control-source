@@ -72,7 +72,7 @@
       <a class="brand" href="https://gsd-texas.com">GS<span>&amp;</span>D / GAUGE</a>
       <div class="navlinks">
         <a href="https://gsd-texas.com">GS&amp;D front door</a>
-        <a class="button" href="/pay">Pay intake</a>
+        <a class="button" href="/pay">Complete payment</a>
       </div>
     </nav>
   </header>
@@ -80,11 +80,11 @@
   <main>
     <section class="hero wrap">
       <div>
-        <p class="eyebrow">GS&amp;D • Proof → Route → Record</p>
-        <h1>Drop in the <span class="red">real problem.</span></h1>
-        <p class="lead">Gauge preserves the exact wording, hashes the intake, checks the source, chooses one controlled route, and returns a proof reference.</p>
+        <p class="eyebrow">One problem • One price lane • One proof record</p>
+        <h1>Put one real problem into a <span class="red">paid next step.</span></h1>
+        <p class="lead">Tell GS&amp;D what failed. Gauge preserves the record, returns a proof number, and takes you to the exact $25, $250, or confirmed deployment lane.</p>
         <div class="button-row">
-          <a class="button" href="#intake">Open controlled intake</a>
+          <a class="button" href="#intake">Start an intake</a>
           <a class="button secondary" href="mailto:gsdtexas.com@gmail.com">Email GS&amp;D</a>
         </div>
       </div>
@@ -96,18 +96,18 @@
     </section>
 
     <section class="wrap">
-      <h2>Three public entry points</h2>
+      <h2>Choose the level you need</h2>
       <div class="offers">
-        <article class="card"><div class="price">$25</div><h3>Reserve / open a file</h3><p>Secure the record and preserve the starting proof before work is scoped.</p><a class="button secondary" href="#intake" data-service-lane="file_reserve_25">Choose file lane</a></article>
-        <article class="card"><div class="price">$250</div><h3>Diagnostic intake</h3><p>One problem, one controlled review, one next route. Additional work is separate.</p><a class="button secondary" href="#intake" data-service-lane="diagnostic_250">Choose diagnostic</a></article>
-        <article class="card"><div class="price">$2,500+</div><h3>Isolated deployment</h3><p>Gauge drops into a bounded customer mission, stabilizes it, proves the result, hands off, and exits.</p><a class="button secondary" href="#intake" data-service-lane="isolated_deployment_2500_plus">Choose deployment</a></article>
+        <article class="card"><div class="price">$25</div><h3>Reserve / open a file</h3><p>Secure the record and preserve the starting proof before work is scoped.</p><a class="button secondary" href="#intake" data-service-lane="file_reserve_25">Start $25 file</a></article>
+        <article class="card"><div class="price">$250</div><h3>Diagnostic intake</h3><p>One problem, one controlled review, one next route. Additional work is separate.</p><a class="button secondary" href="#intake" data-service-lane="diagnostic_250">Start $250 diagnostic</a></article>
+        <article class="card"><div class="price">$2,500+</div><h3>Isolated deployment</h3><p>Gauge drops into a bounded customer mission, stabilizes it, proves the result, hands off, and exits.</p><a class="button secondary" href="#intake" data-service-lane="isolated_deployment_2500_plus">Request deployment scope</a></article>
       </div>
     </section>
 
     <section id="intake" class="wrap">
       <div class="panel">
-        <h2>Controlled Gauge intake</h2>
-        <p class="fine">Do not diagnose it for us. Preserve what happened in your own words. Unknown public sources are held for owner verification before any external action.</p>
+        <h2>Start with the failure</h2>
+        <p class="fine">Use your own words: what is happening, what should happen, and where it stops. Gauge preserves that exact record before GS&amp;D routes or changes anything.</p>
         <form id="gauge-intake" name="gauge-public-intake" method="POST" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field">
           <input type="hidden" name="form-name" value="gauge-public-intake">
           <input type="hidden" name="proof_reference" id="proof_reference">
@@ -152,9 +152,9 @@
             <label>One proof file<input type="file" name="proof_file" accept="image/*,.pdf,.txt"></label>
           </div>
           <label class="check"><input type="checkbox" name="accurate_info" value="yes" required><span>I confirm this record is accurate to the best of my knowledge and understand that intake does not authorize additional work.</span></label>
-          <button id="submit-button" type="submit">Create proof record</button>
+          <button id="submit-button" type="submit">Create proof &amp; continue to payment</button>
           <pre id="result" aria-live="polite"></pre>
-          <div id="proof-actions" class="proof-actions"><a class="button" href="/pay" target="_blank" rel="noreferrer">Pay matching lane</a><button id="copy-proof" class="secondary" type="button">Copy proof reference</button></div>
+          <div id="proof-actions" class="proof-actions"><a id="payment-link" class="button" href="/pay">Continue to payment</a><button id="copy-proof" class="secondary" type="button">Copy proof reference</button></div>
         </form>
       </div>
     </section>
@@ -169,7 +169,13 @@
     const health = document.getElementById('health');
     const serviceLane = document.getElementById('service_lane');
     const proofActions = document.getElementById('proof-actions');
+    const paymentLink = document.getElementById('payment-link');
     const copyProof = document.getElementById('copy-proof');
+    const laneLabels = {
+      file_reserve_25: '$25 payment',
+      diagnostic_250: '$250 payment',
+      isolated_deployment_2500_plus: 'deployment amount confirmation'
+    };
     let currentProofReference = '';
 
     function show(message) {
@@ -206,6 +212,11 @@
 
       const formData = new FormData(form);
       const file = formData.get('proof_file');
+      if (file && file.size > 8 * 1024 * 1024) {
+        show('HELD — PROOF FILE TOO LARGE\nUse one file no larger than 8 MB. Nothing was submitted.');
+        submitButton.disabled = false;
+        return;
+      }
       const payload = {
         source: 'public-gauge-intake',
         channel: 'form',
@@ -247,6 +258,14 @@
         }
 
         currentProofReference = proof.proof_reference || '';
+        const chosenLane = String(formData.get('service_lane') || '');
+        const payParams = new URLSearchParams({
+          lane: chosenLane,
+          proof: proof.proof_reference || '',
+          hash: proof.raw_hash || ''
+        });
+        paymentLink.href = '/pay?' + payParams.toString();
+        paymentLink.textContent = 'Continue to ' + (laneLabels[chosenLane] || 'payment');
         proofActions.classList.add('show');
         copyProof.textContent = 'Copy proof reference';
 
@@ -257,7 +276,7 @@
           'Owner queue: connected\n' +
           'Status: held for GS&D source verification\n' +
           'Evidence copy: ' + (mirrorStored ? 'stored' : 'primary Gauge proof preserved') + '\n' +
-          'Payment note: include this proof reference with the matching lane.'
+          'Next: use the payment button below. Amount and proof note are carried forward.'
         );
         form.reset();
       } catch (error) {
