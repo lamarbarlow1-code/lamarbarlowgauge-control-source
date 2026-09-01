@@ -43,8 +43,24 @@ test("build ships the owner controller shell without exposing the protected API"
   const functionFiles = await readdir(new URL("../netlify/functions/", import.meta.url));
   assert.deepEqual(
     functionFiles.sort(),
-    ["gauge-intake.js", "gauge-stack-agent.mts", "private-boundary.mts"],
+    ["gauge-intake.js", "gauge-payment-proof.js", "gauge-stack-agent.mts", "private-boundary.mts"],
   );
+});
+
+test("build ships a proof-bound payment handoff instead of a blind Cash App redirect", async () => {
+  const intake = await readFile(new URL("../dist/index.html", import.meta.url), "utf8");
+  const payment = await readFile(new URL("../dist/pay.html", import.meta.url), "utf8");
+  const config = await readFile(new URL("../netlify.toml", import.meta.url), "utf8");
+
+  assert.match(intake, /data-netlify="true"/);
+  assert.match(intake, /name="form-name" value="gauge-public-intake"/);
+  assert.match(intake, /id="payment-link"/);
+  assert.match(intake, /new URLSearchParams/);
+  assert.match(payment, /\/api\/gauge-payment-proof/);
+  assert.match(payment, /owner verification required/i);
+  assert.match(payment, /Open \$GaugeSystems in Cash App/);
+  assert.match(config, /from = "\/pay"\s+to = "\/pay\.html"\s+status = 200/s);
+  assert.match(config, /from = "\/cashapp"\s+to = "https:\/\/cash\.app\/\$GaugeSystems"\s+status = 302/s);
 });
 
 test("corrections are owner-only, governed, hash-deduplicated, and proof-backed", async () => {

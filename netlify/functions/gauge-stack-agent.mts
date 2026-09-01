@@ -102,6 +102,14 @@ type PublicIntakeRecord = {
   result: string;
   proof_chain: Array<Record<string, unknown>>;
   proof_head: string;
+  public_payment_submission?: {
+    service_lane?: string;
+    payment_status?: string;
+    payment_reference?: string;
+    submission_id?: string;
+    submitted_at?: string;
+    verification_state?: string;
+  };
   owner_control?: {
     route?: string;
     state?: string;
@@ -583,8 +591,8 @@ async function readPublicIntakes() {
   }
 
   return records.sort((left, right) => {
-    const leftDate = Date.parse(left.owner_control?.updated_at || left.received_at || "") || 0;
-    const rightDate = Date.parse(right.owner_control?.updated_at || right.received_at || "") || 0;
+    const leftDate = Date.parse(left.owner_control?.updated_at || left.public_payment_submission?.submitted_at || left.received_at || "") || 0;
+    const rightDate = Date.parse(right.owner_control?.updated_at || right.public_payment_submission?.submitted_at || right.received_at || "") || 0;
     return rightDate - leftDate;
   });
 }
@@ -598,7 +606,7 @@ function summarizeIntakes(intakes: OwnerIntakeRecord[]) {
     active: intakes.filter((intake) => currentState(intake) === "active").length,
     complete: intakes.filter((intake) => currentState(intake) === "complete").length,
     needs_payment: intakes.filter((intake) => {
-      const payment = intake.owner_control?.payment_status;
+      const payment = intake.owner_control?.payment_status || intake.public_payment_submission?.payment_status || "unpaid";
       const route = intake.owner_control?.route || intake.chosen_route;
       return payment === "unpaid" || payment === "proof_submitted" || route === "payment_gate";
     }).length,
